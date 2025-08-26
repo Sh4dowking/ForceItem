@@ -1,0 +1,42 @@
+name: ForceItem
+version: 1.0.0
+main: com.sh4dowking.forceitem.Main
+api-version: 1.21
+author: Sh4dowking
+description: A competitive minigame where players race to collect randomly assigned target items
+website: https://github.com/Sh4dowking/ForceItem
+
+commands:
+  startgame:
+    description: Start a new ForceItem game with specified duration and joker count
+    usage: /startgame <seconds> <jokers>
+    permission: forceitem.admin
+    permission-message: §cYou don't have permission to start games!
+  stopgame:
+    description: End the currently running ForceItem game
+    usage: /stopgame
+    permission: forceitem.admin  
+    permission-message: §cYou don't have permission to stop games!
+  leaderboard:
+    description: View the interactive ForceItem leaderboard and results
+    usage: /leaderboard
+    permission: forceitem.use
+    permission-message: §cYou don't have permission to view the leaderboard!
+  item:
+    description: Display information about your current target item
+    usage: /item
+    permission: forceitem.use
+    permission-message: §cYou don't have permission to view item information!
+
+permissions:
+  forceitem.*:
+    description: All ForceItem permissions
+    children:
+      forceitem.admin: true
+      forceitem.use: true
+  forceitem.admin:
+    description: Administrative permissions (start/stop games)
+    default: op
+  forceitem.use:
+    description: Player permissions (view leaderboard, item info)
+    default: true
