@@ -46,16 +46,21 @@ public class LeaderboardGUI implements Listener {
     private final Main plugin;
     private final Map<UUID, List<Material>> playerCollectedItems;
     private final Map<UUID, Integer> playerScores;
+    private final Map<UUID, List<CollectionEvent>> playerCollectionHistory;
+    private final long gameStartTime;
     private final List<PlayerResult> sortedResults;
     
     // Pagination tracking for individual player views
     private final Map<UUID, Integer> currentPlayerPage = new HashMap<>();
     private final Map<UUID, Integer> currentViewingPlayer = new HashMap<>();
     
-    public LeaderboardGUI(Main plugin, Map<UUID, List<Material>> collectedItems, Map<UUID, Integer> scores) {
+    public LeaderboardGUI(Main plugin, Map<UUID, List<Material>> collectedItems, Map<UUID, Integer> scores, 
+                         Map<UUID, List<CollectionEvent>> collectionHistory, long gameStartTime) {
         this.plugin = plugin;
         this.playerCollectedItems = new HashMap<>(collectedItems);
         this.playerScores = new HashMap<>(scores);
+        this.playerCollectionHistory = new HashMap<>(collectionHistory);
+        this.gameStartTime = gameStartTime;
         
         // Create sorted results
         this.sortedResults = scores.entrySet().stream()
@@ -127,23 +132,36 @@ public class LeaderboardGUI implements Listener {
         
         // Add collected items (36 slots for items, from slot 9 to 44)
         List<Material> items = result.getCollectedItems();
+        // Display items with detailed information
         int startIndex = page * 36;
-        int endIndex = Math.min(startIndex + 36, items.size());
+        List<CollectionEvent> collectionEvents = playerCollectionHistory.getOrDefault(result.getPlayerId(), new ArrayList<>());
+        int endIndex = Math.min(startIndex + 36, collectionEvents.size());
         
         for (int i = startIndex; i < endIndex; i++) {
-            Material material = items.get(i);
-            ItemStack item = new ItemStack(material);
+            CollectionEvent event = collectionEvents.get(i);
+            ItemStack item = new ItemStack(event.getItem());
             ItemMeta meta = item.getItemMeta();
             if (meta != null) {
-                meta.setDisplayName(ChatColor.GOLD + formatMaterialName(material));
-                meta.setLore(Arrays.asList(ChatColor.GRAY + "Item #" + (i + 1)));
+                String displayName = ChatColor.GOLD + formatMaterialName(event.getItem());
+                if (event.wasJokered()) {
+                    displayName += ChatColor.RED + " ⚡";
+                }
+                meta.setDisplayName(displayName);
+                
+                List<String> lore = new ArrayList<>();
+                lore.add(ChatColor.GRAY + "Item #" + (i + 1));
+                lore.add(ChatColor.YELLOW + "Collected at: " + ChatColor.WHITE + event.getFormattedTime(gameStartTime));
+                if (event.wasJokered()) {
+                    lore.add(ChatColor.RED + "Obtained using: " + ChatColor.GOLD + "Joker");
+                }
+                meta.setLore(lore);
                 item.setItemMeta(meta);
             }
             inv.setItem(9 + (i - startIndex), item);
         }
         
         // Navigation buttons
-        addNavigationButtons(inv, playerIndex, page, items.size());
+        addNavigationButtons(inv, playerIndex, page, collectionEvents.size());
         
         viewer.openInventory(inv);
         currentViewingPlayer.put(viewer.getUniqueId(), playerIndex);
@@ -241,7 +259,6 @@ public class LeaderboardGUI implements Listener {
             
             List<String> lore = new ArrayList<>();
             lore.add(ChatColor.GREEN + "Score: " + ChatColor.AQUA + result.getScore() + " points");
-            lore.add(ChatColor.WHITE + "Items collected: " + ChatColor.AQUA + result.getCollectedItems().size());
             lore.add(ChatColor.GRAY + "Click to view collected items!");
             skullMeta.setLore(lore);
             

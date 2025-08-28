@@ -31,12 +31,12 @@ public class SurvivalItems {
      * Comprehensive list of survival-obtainable materials
      * Excludes creative-only blocks, command blocks, and unobtainable items
      */
+
     private static final List<Material> SURVIVAL_ITEMS = Arrays.asList(
         // Basic blocks and terrain materials
         Material.STONE, Material.GRANITE, Material.POLISHED_GRANITE, Material.DIORITE, Material.POLISHED_DIORITE,
         Material.ANDESITE, Material.POLISHED_ANDESITE, Material.DEEPSLATE, Material.COBBLED_DEEPSLATE,
-        Material.POLISHED_DEEPSLATE, Material.CALCITE, Material.TUFF, Material.DRIPSTONE_BLOCK,
-        Material.GRASS_BLOCK, Material.DIRT, Material.COARSE_DIRT, Material.PODZOL, Material.ROOTED_DIRT,
+        Material.POLISHED_DEEPSLATE, Material.CALCITE, Material.TUFF, Material.DRIPSTONE_BLOCK, Material.DIRT, Material.COARSE_DIRT, Material.ROOTED_DIRT,
         Material.MUD, Material.CLAY, Material.GRAVEL, Material.SAND, Material.RED_SAND,
         
         // Wood types and wooden items
@@ -99,13 +99,14 @@ public class SurvivalItems {
         Material.IRON_SWORD, Material.IRON_PICKAXE, Material.IRON_AXE, Material.IRON_SHOVEL, Material.IRON_HOE,
         Material.GOLDEN_SWORD, Material.GOLDEN_PICKAXE, Material.GOLDEN_AXE, Material.GOLDEN_SHOVEL, Material.GOLDEN_HOE,
         Material.DIAMOND_SWORD, Material.DIAMOND_PICKAXE, Material.DIAMOND_AXE, Material.DIAMOND_SHOVEL, Material.DIAMOND_HOE,
-        Material.BOW, Material.CROSSBOW, Material.TRIDENT, Material.SHIELD, Material.FISHING_ROD,
+        Material.BOW, Material.CROSSBOW, Material.SHIELD, Material.FISHING_ROD,
         Material.FLINT_AND_STEEL, Material.SHEARS, Material.COMPASS, Material.CLOCK, Material.SPYGLASS,
         
         // Armor
         Material.LEATHER_HELMET, Material.LEATHER_CHESTPLATE, Material.LEATHER_LEGGINGS, Material.LEATHER_BOOTS,
         Material.IRON_HELMET, Material.IRON_CHESTPLATE, Material.IRON_LEGGINGS, Material.IRON_BOOTS,
         Material.GOLDEN_HELMET, Material.GOLDEN_CHESTPLATE, Material.GOLDEN_LEGGINGS, Material.GOLDEN_BOOTS,
+        Material.CHAINMAIL_BOOTS, Material.CHAINMAIL_LEGGINGS, Material.CHAINMAIL_CHESTPLATE, Material.CHAINMAIL_HELMET,
         Material.DIAMOND_HELMET, Material.DIAMOND_CHESTPLATE, Material.DIAMOND_LEGGINGS, Material.DIAMOND_BOOTS,
         
         // Food
@@ -116,20 +117,19 @@ public class SurvivalItems {
         Material.COOKED_CHICKEN, Material.BEEF, Material.COOKED_BEEF, Material.PORKCHOP, Material.COOKED_PORKCHOP,
         Material.MUTTON, Material.COOKED_MUTTON, Material.RABBIT, Material.COOKED_RABBIT, Material.RABBIT_STEW,
         Material.COD, Material.COOKED_COD, Material.SALMON, Material.COOKED_SALMON, Material.TROPICAL_FISH,
-        Material.PUFFERFISH, Material.DRIED_KELP, Material.KELP, Material.MUSHROOM_STEW, Material.HONEY_BOTTLE, Material.MILK_BUCKET,
+        Material.PUFFERFISH, Material.DRIED_KELP, Material.KELP, Material.MUSHROOM_STEW, Material.MILK_BUCKET,
         
         // Plants and farming
         Material.WHEAT, Material.WHEAT_SEEDS, Material.PUMPKIN, Material.CARVED_PUMPKIN, Material.JACK_O_LANTERN,
         Material.MELON, Material.MELON_SEEDS, Material.PUMPKIN_SEEDS, Material.BEETROOT_SEEDS, Material.COCOA_BEANS,
-        Material.SUGAR_CANE, Material.BAMBOO, Material.CACTUS, Material.BROWN_MUSHROOM, Material.RED_MUSHROOM,
-        Material.MUSHROOM_STEM, Material.BROWN_MUSHROOM_BLOCK, Material.RED_MUSHROOM_BLOCK, Material.VINE,
-        Material.LILY_PAD, Material.SEA_PICKLE, Material.SEAGRASS, Material.TALL_SEAGRASS,
+        Material.SUGAR_CANE, Material.BAMBOO, Material.CACTUS, Material.BROWN_MUSHROOM, Material.RED_MUSHROOM, Material.VINE,
+        Material.LILY_PAD, Material.SEA_PICKLE, Material.SEAGRASS,
         
         // Flowers
         Material.DANDELION, Material.POPPY, Material.BLUE_ORCHID, Material.ALLIUM, Material.AZURE_BLUET,
         Material.RED_TULIP, Material.ORANGE_TULIP, Material.WHITE_TULIP, Material.PINK_TULIP, Material.OXEYE_DAISY,
         Material.CORNFLOWER, Material.LILY_OF_THE_VALLEY, Material.SUNFLOWER, Material.LILAC,
-        Material.ROSE_BUSH, Material.PEONY, Material.DEAD_BUSH, Material.AZALEA, Material.FLOWERING_AZALEA,
+        Material.ROSE_BUSH, Material.PEONY, Material.AZALEA, Material.FLOWERING_AZALEA,
         
         // Nether items
         Material.NETHERRACK, Material.NETHER_BRICKS, Material.NETHER_BRICK_STAIRS, Material.NETHER_BRICK_SLAB,
@@ -145,13 +145,14 @@ public class SurvivalItems {
         Material.GLOWSTONE_DUST, Material.GLOWSTONE, Material.QUARTZ, Material.QUARTZ_BLOCK, Material.QUARTZ_STAIRS,
         Material.QUARTZ_SLAB, Material.CHISELED_QUARTZ_BLOCK, Material.QUARTZ_PILLAR, Material.SMOOTH_QUARTZ,
         Material.SMOOTH_QUARTZ_STAIRS, Material.SMOOTH_QUARTZ_SLAB,
+    
         
         // Redstone
-        Material.REDSTONE_TORCH, Material.REDSTONE_WALL_TORCH, Material.REPEATER, Material.COMPARATOR,
+        Material.REDSTONE_TORCH, Material.REPEATER, Material.COMPARATOR,
         Material.LEVER, Material.STONE_PRESSURE_PLATE, Material.HEAVY_WEIGHTED_PRESSURE_PLATE,
         Material.LIGHT_WEIGHTED_PRESSURE_PLATE, Material.STONE_BUTTON, Material.TRIPWIRE_HOOK,
         Material.DAYLIGHT_DETECTOR, Material.REDSTONE_LAMP, Material.TNT, Material.DISPENSER, Material.DROPPER,
-        Material.HOPPER, Material.PISTON, Material.STICKY_PISTON, Material.SLIME_BLOCK, Material.HONEY_BLOCK,
+        Material.HOPPER, Material.PISTON,
         Material.OBSERVER, Material.TARGET, Material.LIGHTNING_ROD,
         
         // Utility blocks
@@ -187,7 +188,7 @@ public class SurvivalItems {
         
         // Miscellaneous items
         Material.STICK, Material.BOWL, Material.STRING, Material.FEATHER, Material.FLINT, Material.LEATHER,
-        Material.RABBIT_HIDE, Material.PAPER, Material.BOOK, Material.SLIME_BALL, Material.EGG, Material.INK_SAC,
+        Material.RABBIT_HIDE, Material.PAPER, Material.BOOK, Material.SLIME_BALL, Material.INK_SAC,
         Material.GLOW_INK_SAC, Material.BONE, Material.BONE_MEAL, Material.SUGAR,
         Material.LEAD, Material.PRISMARINE_SHARD, Material.PRISMARINE_CRYSTALS
     );

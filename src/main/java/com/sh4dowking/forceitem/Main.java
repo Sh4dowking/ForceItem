@@ -3,14 +3,18 @@ package com.sh4dowking.forceitem;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.GameRule;
 import org.bukkit.Material;
 import org.bukkit.Sound;
+import org.bukkit.World;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
@@ -20,9 +24,17 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.PlayerAttemptPickupItemEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.BundleMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -43,15 +55,45 @@ import org.bukkit.scheduler.BukkitRunnable;
  * - /stopgame - End the current game
  * - /leaderboard - View game results
  * - /item - View current target item info
+ * - /skip <playername> - Skip a player's target item (admin only)
  * 
  * @author Sh4dowking
  * @version 1.0
  */
+
+/**
+ * Represents a single collection event with timestamp and method used
+ */
+class CollectionEvent {
+    private final Material item;
+    private final long timestamp;
+    private final boolean usedJoker;
+    
+    public CollectionEvent(Material item, long timestamp, boolean usedJoker) {
+        this.item = item;
+        this.timestamp = timestamp;
+        this.usedJoker = usedJoker;
+    }
+    
+    public Material getItem() { return item; }
+    public long getTimestamp() { return timestamp; }
+    public boolean wasJokered() { return usedJoker; }
+    
+    public String getFormattedTime(long gameStartTime) {
+        long elapsedMs = timestamp - gameStartTime;
+        long minutes = elapsedMs / 60000;
+        long seconds = (elapsedMs % 60000) / 1000;
+        return String.format("%02d:%02d", minutes, seconds);
+    }
+}
+
 public class Main extends JavaPlugin implements Listener {
     
     // Core game components
     private CountdownTimer timer;
     private boolean gameRunning = false;
+    private int currentJokersPerPlayer = 0;
+    private long gameStartTime = 0;
     private LeaderboardGUI leaderboardGUI;
     private ItemInfoGUI itemInfoGUI;
     
@@ -60,9 +102,12 @@ public class Main extends JavaPlugin implements Listener {
     private final Map<UUID, Integer> playerPoints = new HashMap<>();
     private final Map<UUID, Integer> playerJokers = new HashMap<>();
     private final Map<UUID, List<Material>> playerCollectedItems = new HashMap<>();
+    private final Map<UUID, List<CollectionEvent>> playerCollectionHistory = new HashMap<>();
+    private final Map<UUID, Inventory> playerBackpacks = new HashMap<>();
+    private final Map<UUID, Set<Material>> playerAssignedTargets = new HashMap<>();
     
     // Display systems
-    private BossBar gameBossBar;
+    private final Map<UUID, BossBar> playerBossBars = new HashMap<>();
     private BukkitRunnable displayTask;
 
     /**
@@ -77,7 +122,6 @@ public class Main extends JavaPlugin implements Listener {
         // Initialize and register GUI components
         itemInfoGUI = new ItemInfoGUI();
         getServer().getPluginManager().registerEvents(itemInfoGUI, this);
-        
         getLogger().info("ForceItem plugin has been enabled!");
     }
 
@@ -92,9 +136,12 @@ public class Main extends JavaPlugin implements Listener {
         }
         
         // Clean up display systems
-        if (gameBossBar != null) {
-            gameBossBar.removeAll();
+        for (BossBar bossBar : playerBossBars.values()) {
+            if (bossBar != null) {
+                bossBar.removeAll();
+            }
         }
+        playerBossBars.clear();
         
         if (displayTask != null && !displayTask.isCancelled()) {
             displayTask.cancel();
@@ -208,6 +255,72 @@ public class Main extends JavaPlugin implements Listener {
             return true;
         }
         
+        if (command.getName().equalsIgnoreCase("skip")) {
+            // Check if sender has operator privileges
+            if (!sender.isOp()) {
+                sender.sendMessage("§cYou must have operator privileges to use this command!");
+                return true;
+            }
+            
+            // Check if game is running
+            if (!gameRunning) {
+                sender.sendMessage("§cNo game is currently running! Start a game first with /startgame.");
+                return true;
+            }
+            
+            // Check argument count
+            if (args.length != 1) {
+                sender.sendMessage("§cUsage: /skip <playername>");
+                return true;
+            }
+            
+            // Find the target player
+            String playerName = args[0];
+            Player targetPlayer = Bukkit.getPlayer(playerName);
+            
+            if (targetPlayer == null) {
+                sender.sendMessage("§cPlayer '" + playerName + "' is not online!");
+                return true;
+            }
+            
+            // Check if player is in the game (has a target)
+            UUID targetUUID = targetPlayer.getUniqueId();
+            if (!playerTargets.containsKey(targetUUID)) {
+                sender.sendMessage("§cPlayer '" + playerName + "' is not participating in the current game!");
+                return true;
+            }
+            
+            // Get current target for feedback
+            Material currentTarget = playerTargets.get(targetUUID);
+            String currentTargetName = currentTarget != null ? formatMaterialName(currentTarget) : "Unknown";
+            
+            // Assign new target without affecting jokers or points
+            Material newTarget = getRandomMaterialForPlayer(targetUUID);
+            playerTargets.put(targetUUID, newTarget);
+            
+            // Notify the target player
+            targetPlayer.sendMessage("§e⚡ Your item has been skipped by an administrator!");
+            targetPlayer.sendMessage("§f§lNew target: §b" + formatMaterialName(newTarget));
+            targetPlayer.playSound(targetPlayer.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
+            
+            // Update player display immediately
+            updatePlayerDisplay(targetPlayer);
+            
+            // Notify the command sender
+            sender.sendMessage("§aSuccessfully skipped §f" + playerName + "§a's target!");
+            sender.sendMessage("§7Previous target: §c" + currentTargetName);
+            targetPlayer.sendMessage("§f§lNew target: §b" + formatMaterialName(newTarget));
+
+            // Broadcast to all players (optional - you can remove this if you want it to be silent)
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                if (player != targetPlayer && player != sender) {
+                    player.sendMessage("§7Administrator skipped §f" + playerName + "§7's target item.");
+                }
+            }
+            
+            return true;
+        }
+        
         return false;
     }
 
@@ -219,6 +332,7 @@ public class Main extends JavaPlugin implements Listener {
      */
     private void startGame(int seconds, int jokersPerPlayer) {
         gameRunning = true;
+        currentJokersPerPlayer = jokersPerPlayer;
         
         // Clear any existing leaderboard from previous games
         if (leaderboardGUI != null) {
@@ -236,19 +350,115 @@ public class Main extends JavaPlugin implements Listener {
         playerPoints.clear();
         playerJokers.clear();
         playerCollectedItems.clear();
+        playerCollectionHistory.clear();
+        playerBackpacks.clear();
+        playerAssignedTargets.clear();
         
-        // Announce game start to all players
-        Bukkit.broadcastMessage("§f§lForceItem §7game started! §eTime: §b" + seconds + "s §7| §eJokers: §b" + jokersPerPlayer);
+        // Set game start time
+        gameStartTime = System.currentTimeMillis();
         
+        // Prepare all players and world
+        preparePlayersAndWorld();
+        
+        // Announce game preparation to all players
+        Bukkit.broadcastMessage("§f§lForceItem §7game starting!");
+        Bukkit.broadcastMessage("§f§lTime: §b" + seconds + "s §7| §f§lJokers: §b" + jokersPerPlayer);
+        // Start countdown with title display
+        startCountdownAndGame(seconds, jokersPerPlayer);
+    }
+    
+    /**
+     * Prepare all players and world for the game
+     * Clears inventories, sets health/hunger, and resets world time
+     */
+    private void preparePlayersAndWorld() {
+        // Set world time to day (0 ticks) and configure gamerules
+        for (World world : Bukkit.getWorlds()) {
+            world.setTime(0);
+            // Enable keep inventory so players don't lose items on death
+            world.setGameRule(GameRule.KEEP_INVENTORY, true);
+            // Enable immediate respawn so players respawn instantly
+            world.setGameRule(GameRule.DO_IMMEDIATE_RESPAWN, true);
+        }
+        
+        // Prepare all online players
         for (Player player : Bukkit.getOnlinePlayers()) {
-            Material randomItem = getRandomMaterial();
+            // Clear inventory completely
+            player.getInventory().clear();
+            
+            // Set health to maximum
+            player.setHealth(player.getMaxHealth());
+            
+            // Set hunger and saturation to maximum
+            player.setFoodLevel(20);
+            player.setSaturation(20.0f);
+            
+            // Clear any active effects (optional enhancement)
+            player.getActivePotionEffects().forEach(effect -> 
+                player.removePotionEffect(effect.getType())
+            );
+            
+            // Reset experience
+            player.setExp(0);
+            player.setLevel(0);
+        }
+    }
+    
+    /**
+     * Start the countdown sequence and then begin the actual game
+     * Shows countdown titles from 3 to 1, then "GO!"
+     */
+    private void startCountdownAndGame(int gameDuration, int jokersPerPlayer) {
+        // Schedule countdown tasks
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            // Countdown: 3
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                player.sendTitle("§e§l3", "§7Get ready...", 0, 20, 10);
+                player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.7f, 1.0f);
+            }
+        }, 0L);
+        
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            // Countdown: 2
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                player.sendTitle("§6§l2", "§7Prepare yourself...", 0, 20, 10);
+                player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.7f, 1.2f);
+            }
+        }, 20L);
+        
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            // Countdown: 1
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                player.sendTitle("§c§l1", "§7Almost there...", 0, 20, 10);
+                player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.7f, 1.4f);
+            }
+        }, 40L);
+        
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            // Game start: GO!
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                player.sendTitle("§a§lGO!", "§7Find your items!", 0, 30, 20);
+                player.playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 0.6f, 1.5f);
+            }
+            
+            // Actually start the game now
+            actuallyStartGame(gameDuration, jokersPerPlayer);
+        }, 60L);
+    }
+    
+    /**
+     * Actually start the game mechanics after countdown
+     * This method contains the original game start logic
+     */
+    private void actuallyStartGame(int seconds, int jokersPerPlayer) {
+        // Assign targets and items to all players
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            Material randomItem = getRandomMaterialForPlayer(player.getUniqueId());
             playerTargets.put(player.getUniqueId(), randomItem);
             playerPoints.put(player.getUniqueId(), 0);
             playerJokers.put(player.getUniqueId(), jokersPerPlayer);
             playerCollectedItems.put(player.getUniqueId(), new ArrayList<>());
-            
-            // Play game start sound
-            player.playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 0.6f, 1.5f);
+            playerCollectionHistory.put(player.getUniqueId(), new ArrayList<>());
             
             // Send target message first
             player.sendMessage("§f§lYour target item: §b" + formatMaterialName(randomItem));
@@ -257,10 +467,17 @@ public class Main extends JavaPlugin implements Listener {
             if (jokersPerPlayer > 0) {
                 ItemStack joker = createJokerItem();
                 joker.setAmount(jokersPerPlayer);
-                player.getInventory().addItem(joker);
-                player.sendMessage("§eYou have been given §b" + jokersPerPlayer + " §eJokers! §7Right-click to skip your current target.");
+                giveItemOrDrop(player, joker);
+                player.sendMessage("§7You have been given §4§l" + jokersPerPlayer + " §4§lJokers§7! Right-click to skip your current target.");
             }
+            
+            // Give player backpack item
+            ItemStack backpack = createBackpackItem();
+            giveItemOrDrop(player, backpack);
+            player.sendMessage("§7You have been given a §6§lBackpack§7! Right-click to access your personal storage.");
         }
+        
+        // Start the game timer and systems
         if (timer != null) timer.cancel();
         timer = new CountdownTimer(this, seconds, this::checkInventories, this::stopGame);
         timer.start();
@@ -279,14 +496,17 @@ public class Main extends JavaPlugin implements Listener {
                 // Add to collected items
                 playerCollectedItems.get(player.getUniqueId()).add(target);
                 
+                // Record collection event
+                playerCollectionHistory.get(player.getUniqueId()).add(new CollectionEvent(target, System.currentTimeMillis(), false));
+                
                 // Play success sound for the player
                 player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.8f, 1.2f);
                 
-                player.sendMessage("§6You collected your item! New target assigned.");
+                player.sendMessage("§a✓ You collected your item! +1 point!");
                 // Assign new target
-                Material newTarget = getRandomMaterial();
+                Material newTarget = getRandomMaterialForPlayer(player.getUniqueId());
                 playerTargets.put(player.getUniqueId(), newTarget);
-                player.sendMessage("§6Your new target item: §b" + formatMaterialName(newTarget));
+                player.sendMessage("§f§lNew target: §b" + formatMaterialName(newTarget));
                 
                 // Update display immediately
                 updatePlayerDisplay(player);
@@ -300,6 +520,7 @@ public class Main extends JavaPlugin implements Listener {
      */
     private void stopGame() {
         gameRunning = false;
+        currentJokersPerPlayer = 0;
         
         // Cancel the game timer
         if (timer != null) timer.cancel();
@@ -308,7 +529,7 @@ public class Main extends JavaPlugin implements Listener {
         stopDisplaySystem();
         
         // Initialize leaderboard GUI for result viewing
-        leaderboardGUI = new LeaderboardGUI(this, playerCollectedItems, playerPoints);
+        leaderboardGUI = new LeaderboardGUI(this, playerCollectedItems, playerPoints, playerCollectionHistory, gameStartTime);
         Bukkit.getPluginManager().registerEvents(leaderboardGUI, this);
         
         // Announce game end
@@ -326,17 +547,44 @@ public class Main extends JavaPlugin implements Listener {
         // Also show text summary
         for (Player player : Bukkit.getOnlinePlayers()) {
             int points = playerPoints.getOrDefault(player.getUniqueId(), 0);
-            int jokersLeft = playerJokers.getOrDefault(player.getUniqueId(), 0);
-            int itemsCollected = playerCollectedItems.getOrDefault(player.getUniqueId(), new ArrayList<>()).size();
             player.sendMessage("§f§lYour final score: §a" + points + " points");
-            player.sendMessage("§fItems collected: §b" + itemsCollected);
-            player.sendMessage("§fJokers remaining: §e" + jokersLeft);
             player.sendMessage("§7Leaderboard GUI will open shortly! Use §f/leaderboard §7to view it again.");
         }
     }
 
     private Material getRandomMaterial() {
         return SurvivalItems.getRandomMaterial();
+    }
+
+    /**
+     * Get a random material for a specific player, avoiding duplicates they've already been assigned this game
+     * 
+     * @param playerId The UUID of the player
+     * @return A Material that the player hasn't been assigned as a target this game
+     */
+    private Material getRandomMaterialForPlayer(UUID playerId) {
+        Set<Material> assignedTargets = playerAssignedTargets.getOrDefault(playerId, new HashSet<>());
+        
+        // If player has been assigned all possible materials (very unlikely), reset their assigned targets
+        if (assignedTargets.size() >= SurvivalItems.getAllSurvivalItems().size()) {
+            assignedTargets.clear();
+            playerAssignedTargets.put(playerId, assignedTargets);
+        }
+        
+        Material newTarget;
+        int attempts = 0;
+        int maxAttempts = 50; // Prevent infinite loops
+        
+        do {
+            newTarget = SurvivalItems.getRandomMaterial();
+            attempts++;
+        } while (assignedTargets.contains(newTarget) && attempts < maxAttempts);
+        
+        // Add the new target to the player's assigned targets set
+        assignedTargets.add(newTarget);
+        playerAssignedTargets.put(playerId, assignedTargets);
+        
+        return newTarget;
     }
 
     /**
@@ -348,7 +596,7 @@ public class Main extends JavaPlugin implements Listener {
         ItemStack joker = new ItemStack(Material.BARRIER);
         ItemMeta meta = joker.getItemMeta();
         if (meta != null) {
-            meta.setDisplayName(ChatColor.RED + "★ " + ChatColor.BOLD + "Joker");
+            meta.setDisplayName(ChatColor.DARK_RED + "★ " + ChatColor.BOLD + "Joker");
             meta.setLore(Arrays.asList(
                 ChatColor.WHITE + "Right-click to skip your current target!",
                 ChatColor.GRAY + "Grants +1 point when used",
@@ -357,6 +605,64 @@ public class Main extends JavaPlugin implements Listener {
             joker.setItemMeta(meta);
         }
         return joker;
+    }
+
+    /**
+     * Create a backpack item that players can use to access extra storage
+     * The bundle is prefilled with dummy items to prevent vanilla bundle mechanics
+     * 
+     * @return ItemStack configured as a backpack with proper display name and lore
+     */
+    private ItemStack createBackpackItem() {
+        ItemStack backpack = new ItemStack(Material.BUNDLE);
+        BundleMeta meta = (BundleMeta) backpack.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName("" + ChatColor.GOLD + ChatColor.BOLD + "Backpack");
+            meta.setLore(Arrays.asList(
+                ChatColor.WHITE + "Right-click to open your personal storage!",
+                ChatColor.GRAY + "Stores items safely during the game",
+                ChatColor.RED + "Cannot be dropped."
+            ));
+            
+            backpack.setItemMeta(meta);
+        }
+        return backpack;
+    }
+
+    /**
+     * Check if an ItemStack is a backpack item
+     * 
+     * @param item ItemStack to check
+     * @return true if item is a valid backpack
+     */
+    private boolean isBackpackItem(ItemStack item) {
+        if (item == null || item.getType() != Material.BUNDLE) return false;
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) return false;
+        
+        String expectedName = "" + ChatColor.GOLD + ChatColor.BOLD + "Backpack";
+        String actualName = meta.getDisplayName();
+        
+        return expectedName.equals(actualName);
+    }
+
+    /**
+     * Get or create a backpack inventory for a player
+     * 
+     * @param player The player to get the backpack for
+     * @return The player's backpack inventory
+     */
+    private Inventory getPlayerBackpack(Player player) {
+        UUID playerId = player.getUniqueId();
+        Inventory backpack = playerBackpacks.get(playerId);
+        
+        if (backpack == null) {
+            // Create new backpack inventory (27 slots = 3 rows)
+            backpack = Bukkit.createInventory(null, 27, ChatColor.AQUA + player.getName() + "'s Backpack");
+            playerBackpacks.put(playerId, backpack);
+        }
+        
+        return backpack;
     }
 
     /**
@@ -370,7 +676,7 @@ public class Main extends JavaPlugin implements Listener {
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return false;
         
-        String expectedName = ChatColor.RED + "★ " + ChatColor.RED + ChatColor.BOLD + "Joker";
+        String expectedName = ChatColor.DARK_RED + "★ " + ChatColor.DARK_RED + ChatColor.BOLD + "Joker";
         String actualName = meta.getDisplayName();
         
         return expectedName.equals(actualName);
@@ -431,6 +737,7 @@ public class Main extends JavaPlugin implements Listener {
                     Material currentTarget = playerTargets.get(player.getUniqueId());
                     if (currentTarget != null) {
                         playerCollectedItems.get(player.getUniqueId()).add(currentTarget);
+                        playerCollectionHistory.get(player.getUniqueId()).add(new CollectionEvent(currentTarget, System.currentTimeMillis(), true));
                     }
                     
                     // Remove one joker from inventory
@@ -441,14 +748,19 @@ public class Main extends JavaPlugin implements Listener {
                     }
                     
                     // Assign new target
-                    Material newTarget = getRandomMaterial();
+                    Material newTarget = getRandomMaterialForPlayer(player.getUniqueId());
                     playerTargets.put(player.getUniqueId(), newTarget);
+                    
+                    // Give player the item they jokered
+                    ItemStack jokerReward = new ItemStack(currentTarget);
+                    giveItemOrDrop(player, jokerReward);
                     
                     // Play pleasant joker use sound
                     player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.3f);
                     
-                    player.sendMessage("§e★ Joker used! §a+1 point! §7New target: §b" + formatMaterialName(newTarget));
-                    player.sendMessage("§6Jokers remaining: §b" + (jokersLeft - 1));
+                    player.sendMessage("§4★ Joker used! §a+1 point!");
+                    player.sendMessage("§f§lYou received: §b" + formatMaterialName(currentTarget)); 
+                    player.sendMessage("§f§lNew target: §b" + formatMaterialName(newTarget));
                     
                     // Update action bar immediately
                     updatePlayerDisplay(player);
@@ -459,6 +771,23 @@ public class Main extends JavaPlugin implements Listener {
                 }
             }
         }
+        
+        // Handle backpack item usage
+        if (isBackpackItem(item)) {
+            // Only cancel right-click actions that we want to handle specially
+            if (event.getAction().toString().contains("RIGHT_CLICK")) {
+                event.setCancelled(true); // Prevent placement and handle as backpack opening
+                
+                // Open the player's backpack inventory
+                Inventory backpack = getPlayerBackpack(player);
+                player.openInventory(backpack);
+                
+                // Play chest open sound
+                player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 1.0f, 1.0f);
+            }
+            // Let other interactions (like left-click, pickup, etc.) proceed normally
+            // This allows normal inventory management while still preventing right-click placement
+        }
     }
 
     @EventHandler
@@ -466,6 +795,50 @@ public class Main extends JavaPlugin implements Listener {
         if (isJokerItem(event.getItemInHand())) {
             event.setCancelled(true);
             event.getPlayer().sendMessage("§cYou cannot place Jokers!");
+        }
+    }
+
+    @EventHandler
+    public void onPlayerDropItem(PlayerDropItemEvent event) {
+        // Prevent players from dropping backpack items
+        if (isBackpackItem(event.getItemDrop().getItemStack())) {
+            event.setCancelled(true);
+            Player player = event.getPlayer();
+            player.sendMessage("§cYou cannot drop your backpack!");
+        }
+    }
+
+    @EventHandler
+    public void onInventoryClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        
+        String inventoryTitle = event.getView().getTitle();
+        
+        // Handle backpack inventory interactions
+        if (inventoryTitle.contains("Backpack")) {
+            // Prevent placing backpack items inside backpack (infinite recursion)
+            if (event.getCursor() != null && isBackpackItem(event.getCursor())) {
+                event.setCancelled(true);
+                player.sendMessage("§cYou cannot put a backpack inside itself!");
+            }
+            // Allow all other interactions in backpack GUI
+        }
+    }
+
+    @EventHandler
+    public void onInventoryDrag(InventoryDragEvent event) {
+        // Simple drag handler - no special bundle logic needed
+    }
+
+    @EventHandler
+    public void onInventoryClose(InventoryCloseEvent event) {
+        // Check if closing a backpack inventory
+        if (event.getPlayer() instanceof Player player) {
+            String inventoryTitle = event.getView().getTitle();
+            if (inventoryTitle.contains("Backpack")) {
+                // Play chest close sound
+                player.playSound(player.getLocation(), Sound.BLOCK_CHEST_CLOSE, 1.0f, 1.0f);
+            }
         }
     }
 
@@ -481,9 +854,12 @@ public class Main extends JavaPlugin implements Listener {
             // Add to collected items
             playerCollectedItems.get(player.getUniqueId()).add(target);
             
-            player.sendMessage("§a✓ You collected your item! §7New target assigned.");
+            // Record collection event
+            playerCollectionHistory.get(player.getUniqueId()).add(new CollectionEvent(target, System.currentTimeMillis(), false));
+            
+            player.sendMessage("§a✓ You collected your item! +1 point");
             // Assign new target
-            Material newTarget = getRandomMaterial();
+            Material newTarget = getRandomMaterialForPlayer(player.getUniqueId());
             playerTargets.put(player.getUniqueId(), newTarget);
             player.sendMessage("§f§lNew target: §b" + formatMaterialName(newTarget));
             
@@ -492,12 +868,74 @@ public class Main extends JavaPlugin implements Listener {
         }
     }
     
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        UUID playerId = player.getUniqueId();
+        
+        // If a game is running, set up this player to participate
+        if (gameRunning) {
+            // Give the player a boss bar if they don't have one
+            if (!playerBossBars.containsKey(playerId)) {
+                BossBar bossBar = Bukkit.createBossBar("", BarColor.WHITE, BarStyle.SOLID);
+                bossBar.setProgress(0.0);
+                bossBar.addPlayer(player);
+                playerBossBars.put(playerId, bossBar);
+            }
+            
+            // Initialize player data if they don't have any (new player joining mid-game)
+            if (!playerTargets.containsKey(playerId)) {
+                // Initialize player data
+                playerTargets.put(playerId, getRandomMaterialForPlayer(playerId));
+                playerPoints.put(playerId, 0);
+                playerJokers.put(playerId, currentJokersPerPlayer);
+                playerCollectedItems.put(playerId, new ArrayList<>());
+                playerCollectionHistory.put(playerId, new ArrayList<>());
+                
+                // Give them a backpack
+                ItemStack backpack = createBackpackItem();
+                giveItemOrDrop(player, backpack);
+                
+                // Create their personal backpack inventory
+                Inventory backpackInv = Bukkit.createInventory(null, 27, player.getName() + "'s Backpack");
+                playerBackpacks.put(playerId, backpackInv);
+                
+                // Welcome them to the ongoing game
+                player.sendMessage("§6§lWelcome to the ongoing Force Item game!");
+                player.sendMessage("§f§lTarget: §b" + formatMaterialName(playerTargets.get(playerId)));
+                player.sendMessage("§f§lJokers remaining: §e" + playerJokers.get(playerId));
+            }
+            
+            // Update their display immediately
+            updatePlayerDisplay(player);
+        }
+    }
+    
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        UUID playerId = player.getUniqueId();
+        
+        // Clean up player's boss bar if they have one
+        BossBar playerBossBar = playerBossBars.remove(playerId);
+        if (playerBossBar != null) {
+            playerBossBar.removeAll();
+        }
+        
+        // Note: We don't remove other player data (targets, points, etc.) because:
+        // 1. The player might rejoin during the same game
+        // 2. Their data is needed for final leaderboard/results
+        // 3. All data gets cleared when a new game starts anyway
+    }
+
     private void startDisplaySystem() {
-        // Create an invisible boss bar by setting progress to 0 and using transparent style
-        gameBossBar = Bukkit.createBossBar("", BarColor.WHITE, BarStyle.SOLID);
-        gameBossBar.setProgress(0.0); // This makes the actual bar invisible
+        // Create individual invisible boss bars for each player
+        playerBossBars.clear();
         for (Player player : Bukkit.getOnlinePlayers()) {
-            gameBossBar.addPlayer(player);
+            BossBar bossBar = Bukkit.createBossBar("", BarColor.WHITE, BarStyle.SOLID);
+            bossBar.setProgress(0.0); // This makes the actual bar invisible
+            bossBar.addPlayer(player);
+            playerBossBars.put(player.getUniqueId(), bossBar);
         }
         
         // Start display task that only updates boss bar (timer is handled by CountdownTimer)
@@ -530,10 +968,11 @@ public class Main extends JavaPlugin implements Listener {
             String targetName = formatMaterialName(target);
             String displayText = "§f§lTarget: §b" + targetName + " §7| §f§lPoints: §a" + points;
             
-            if (gameBossBar != null) {
-                gameBossBar.setTitle(displayText);
+            BossBar playerBossBar = playerBossBars.get(player.getUniqueId());
+            if (playerBossBar != null) {
+                playerBossBar.setTitle(displayText);
                 // Ensure the bar remains invisible
-                gameBossBar.setProgress(0.0);
+                playerBossBar.setProgress(0.0);
             }
         }
     }
@@ -542,9 +981,24 @@ public class Main extends JavaPlugin implements Listener {
         if (displayTask != null && !displayTask.isCancelled()) {
             displayTask.cancel();
         }
-        if (gameBossBar != null) {
-            gameBossBar.removeAll();
-            gameBossBar = null;
+        for (BossBar bossBar : playerBossBars.values()) {
+            if (bossBar != null) {
+                bossBar.removeAll();
+            }
+        }
+        playerBossBars.clear();
+    }
+    
+    private void giveItemOrDrop(Player player, ItemStack item) {
+        // Try to add the item to the player's inventory
+        HashMap<Integer, ItemStack> leftover = player.getInventory().addItem(item);
+        
+        // If there are leftover items (inventory was full), drop them near the player
+        if (!leftover.isEmpty()) {
+            for (ItemStack droppedItem : leftover.values()) {
+                player.getWorld().dropItemNaturally(player.getLocation(), droppedItem);
+            }
+            player.sendMessage("§e⚠ Your inventory was full! The item was dropped near you.");
         }
     }
 }

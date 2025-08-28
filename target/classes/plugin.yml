@@ -27,6 +27,11 @@ commands:
     usage: /item
     permission: forceitem.use
     permission-message: §cYou don't have permission to view item information!
+  skip:
+    description: Skip the current target item for a specified player (admin only)
+    usage: /skip <playername>
+    permission: forceitem.admin
+    permission-message: §cYou don't have permission to skip player items!
 
 permissions:
   forceitem.*:
