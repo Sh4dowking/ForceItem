@@ -1,6 +1,9 @@
 package com.sh4dowking.forceitem;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -13,6 +16,8 @@ import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+
+import com.sh4dowking.forceitem.perks.GamePerk;
 
 /**
  * StartGameGUI - Provides a graphical interface for starting ForceItem games
@@ -198,10 +203,12 @@ public class StartGameGUI implements Listener {
         if (meta != null) {
             meta.setDisplayName("§b§lPerks");
             meta.setLore(java.util.Arrays.asList(
-                "§7Special player abilities",
-                "§7Extra lives, bonuses, etc.",
+                "§7Perks modification option",
+                "§7Passive buffs and abilities",
                 "",
-                "§aClick to configure!"
+                "§7Current: §6" + plugin.getPerkManager().getActivePerkDisplay(),
+                "",
+                "§a Click to configure!"
             ));
             item.setItemMeta(meta);
         }
@@ -238,14 +245,22 @@ public class StartGameGUI implements Listener {
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.setDisplayName("§a§lStart Game");
-            meta.setLore(Arrays.asList(
-                "§7Begin ForceItem game",
-                "§7Duration: §6" + formatTime(currentTimeMinutes),
-                "§7Jokers: §6" + currentJokers + " per player",
-                "§7Modifier: §6" + selectedModifier,
-                "",
-                "§aClick to start!"
-            ));
+            
+            // Build lore with current settings
+            List<String> lore = new ArrayList<>();
+            lore.add("§7Begin ForceItem game");
+            lore.add("§7Duration: §6" + formatTime(currentTimeMinutes));
+            lore.add("§7Jokers: §6" + currentJokers + " per player");
+            lore.add("§7Modifier: §6" + selectedModifier);
+            
+            // Add active perks to the display
+            String activePerksDisplay = plugin.getPerkManager().getActivePerkDisplay();
+            lore.add("§7Active Perks: §6" + activePerksDisplay);
+            
+            lore.add("");
+            lore.add("§aClick to start!");
+            
+            meta.setLore(lore);
             item.setItemMeta(meta);
         }
         return item;
@@ -271,6 +286,8 @@ public class StartGameGUI implements Listener {
             setupJokerSettingsMenu(subGui);
         } else if (menuType.equals("Modifiers")) {
             setupModifiersMenu(subGui);
+        } else if (menuType.equals("Perks")) {
+            setupPerksMenu(subGui);
         } else {
             // For other menus, just add navigation for now
             addNavigationItems(subGui);
@@ -409,6 +426,63 @@ public class StartGameGUI implements Listener {
             doubleTroubleButton.setItemMeta(doubleTroubleMeta);
         }
         inventory.setItem(23, doubleTroubleButton);
+        
+        // Add navigation items
+        addNavigationItems(inventory);
+    }
+    
+    /**
+     * Setup the Perks selection sub-menu
+     * 
+     * @param inventory The inventory to setup
+     */
+    private void setupPerksMenu(Inventory inventory) {
+        // Add title item
+        ItemStack title = new ItemStack(Material.DIAMOND);
+        ItemMeta titleMeta = title.getItemMeta();
+        if (titleMeta != null) {
+            titleMeta.setDisplayName("§b§lPerk Selection");
+            titleMeta.setLore(Arrays.asList(
+                "§7Select perks to enhance your game",
+                "§7Multiple perks can be active at once",
+                "",
+                "§7Active perks: §a" + plugin.getPerkManager().getActivePerkDisplay()
+            ));
+            title.setItemMeta(titleMeta);
+        }
+        inventory.setItem(4, title);
+        
+        // Add available perks from PerkManager
+        int slot = 19; // Starting position for perks
+        for (Map.Entry<String, GamePerk> entry : plugin.getPerkManager().getRegisteredPerks().entrySet()) {
+            String perkName = entry.getKey();
+            GamePerk perk = entry.getValue();
+            boolean isActive = plugin.getPerkManager().isPerkActive(perkName);
+            
+            ItemStack perkItem = new ItemStack(perk.getDisplayMaterial());
+            ItemMeta perkMeta = perkItem.getItemMeta();
+            if (perkMeta != null) {
+                perkMeta.setDisplayName("§6§l" + perk.getPerkName());
+                
+                // Create lore with perk description
+                List<String> lore = new ArrayList<>(perk.getLore());
+                lore.add("");
+                if (isActive) {
+                    lore.add("§a✓ Currently active");
+                    lore.add("§7Click to deactivate");
+                } else {
+                    lore.add("§7Click to activate");
+                }
+                
+                perkMeta.setLore(lore);
+                perkItem.setItemMeta(perkMeta);
+            }
+            
+            inventory.setItem(slot, perkItem);
+            slot++; // Move to next slot for next perk
+            
+            if (slot > 25) break; // Limit to available slots
+        }
         
         // Add navigation items
         addNavigationItems(inventory);
@@ -624,6 +698,9 @@ public class StartGameGUI implements Listener {
         } else if (menuTitle.contains("Modifiers")) {
             // Handle modifier selection
             handleModifierSelection(player, slot, clickedItem);
+        } else if (menuTitle.contains("Perks")) {
+            // Handle perk selection
+            handlePerkSelection(player, slot, clickedItem);
         }
         
         // TODO: Handle other sub-menu specific items here
@@ -853,6 +930,38 @@ public class StartGameGUI implements Listener {
             default:
                 // Invalid slot for modifier selection
                 break;
+        }
+    }
+    
+    /**
+     * Handle perk selection clicks
+     */
+    private void handlePerkSelection(Player player, int slot, ItemStack clickedItem) {
+        // Check if click is in the perk display area (slots 19-25)
+        if (slot >= 19 && slot <= 25) {
+            String itemName = null;
+            if (clickedItem.hasItemMeta() && clickedItem.getItemMeta().hasDisplayName()) {
+                itemName = clickedItem.getItemMeta().getDisplayName();
+            }
+            
+            if (itemName != null) {
+                // Extract perk name from display name (remove color codes and formatting)
+                String perkName = itemName.replaceAll("§[0-9a-fk-or]", "").trim();
+                
+                // Toggle the perk
+                if (plugin.getPerkManager().isPerkActive(perkName)) {
+                    plugin.getPerkManager().disablePerk(perkName);
+                } else {
+                    plugin.getPerkManager().enablePerk(perkName);
+                }
+                
+                // Refresh the perks menu to show updated selections
+                Inventory currentInv = player.getOpenInventory().getTopInventory();
+                setupPerksMenu(currentInv);
+                
+                // Play sound feedback
+                player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 1.0f);
+            }
         }
     }
     

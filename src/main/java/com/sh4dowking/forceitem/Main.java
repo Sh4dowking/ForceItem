@@ -29,6 +29,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import com.sh4dowking.forceitem.modifiers.ModifierManager;
+import com.sh4dowking.forceitem.perks.PerkManager;
 
 /**
  * ForceItem - A competitive Minecraft minigame plugin
@@ -63,6 +64,7 @@ public class Main extends JavaPlugin implements Listener {
     // Core game components
     private GameManager gameManager;
     private ModifierManager modifierManager;
+    private PerkManager perkManager;
     private LeaderboardGUI leaderboardGUI;
     private ItemInfoGUI itemInfoGUI;
     private StartGameGUI startGameGUI;
@@ -81,6 +83,9 @@ public class Main extends JavaPlugin implements Listener {
         
         // Initialize modifier manager
         modifierManager = new ModifierManager(this);
+        
+        // Initialize perk manager
+        perkManager = new PerkManager(this);
         
         // Register main plugin events
         getServer().getPluginManager().registerEvents(this, this);
@@ -203,6 +208,10 @@ public class Main extends JavaPlugin implements Listener {
     
     public ModifierManager getModifierManager() {
         return modifierManager;
+    }
+    
+    public PerkManager getPerkManager() {
+        return perkManager;
     }
     
     public String formatMaterialName(Material material) {
@@ -481,6 +490,9 @@ public class Main extends JavaPlugin implements Listener {
             // GameManager handles all initialization including jokers, backpack items, etc.
             gameManager.initializeNewPlayer(player);
             
+            // Notify perk system of new player
+            perkManager.onPlayerJoin(player);
+            
             // Create their personal backpack inventory for UI handling
             Inventory backpackInv = Bukkit.createInventory(null, 27, ChatColor.WHITE + player.getName() + "'s Backpack");
             playerBackpacks.put(playerId, backpackInv);
@@ -494,6 +506,9 @@ public class Main extends JavaPlugin implements Listener {
         // Clean up player's boss bar through GameManager
         if (gameManager.isGameRunning()) {
             gameManager.handlePlayerLeave(player);
+            
+            // Notify perk system of player leaving
+            perkManager.onPlayerLeave(player.getUniqueId());
         }
     }
 }

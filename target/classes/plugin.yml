@@ -1,9 +1,9 @@
 name: ForceItem
-version: 1.0.0
+version: 2.1.0
 main: com.sh4dowking.forceitem.Main
 api-version: 1.21
 author: Sh4dowking
-description: A competitive minigame where players race to collect randomly assigned target items
+description: A competitive minigame with GUI system, modifiers, and perks where players race to collect randomly assigned target items
 website: https://github.com/Sh4dowking/ForceItem
 
 commands:

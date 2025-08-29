@@ -13,7 +13,9 @@ import java.util.UUID;
 
 import org.bukkit.Bukkit;
 import org.bukkit.GameRule;
+import org.bukkit.Keyed;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.boss.BarColor;
@@ -21,6 +23,7 @@ import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.Recipe;
 import org.bukkit.scheduler.BukkitRunnable;
 
 /**
@@ -219,6 +222,9 @@ public class GameManager {
         // Stop display systems (boss bar, action bar updates)
         stopDisplaySystem();
         
+        // Clean up modifier and perk systems
+        plugin.getPerkManager().onGameEnd();
+        
         // Initialize leaderboard GUI for result viewing
         plugin.createLeaderboard(playerCollectedItems, playerPoints, playerCollectionHistory, gameStartTime);
         
@@ -337,6 +343,9 @@ public class GameManager {
         for (Player player : Bukkit.getOnlinePlayers()) {
             allPlayers.add(player);
             
+            // Clear all existing potion effects to start fresh
+            clearAllEffects(player);
+            
             playerPoints.put(player.getUniqueId(), 0);
             playerJokers.put(player.getUniqueId(), jokersPerPlayer);
             playerCollectedItems.put(player.getUniqueId(), new ArrayList<>());
@@ -354,10 +363,16 @@ public class GameManager {
             ItemStack backpack = plugin.createBackpackItem();
             plugin.giveItemOrDrop(player, backpack);
             player.sendMessage("§fYou have been given a §6Backpack§f! Right-click to access your personal storage.");
+            
+            // Grant all crafting recipes to the player
+            grantAllRecipes(player);
         }
         
         // Initialize modifier system first (this will assign targets and send messages)
         plugin.getModifierManager().onGameStart(allPlayers, jokersPerPlayer);
+        
+        // Initialize perk system with game duration
+        plugin.getPerkManager().onGameStart(allPlayers, jokersPerPlayer, seconds);
         
         // Only assign standard targets if no modifier is active
         if (plugin.getModifierManager().getActiveModifier() == null) {
@@ -396,6 +411,9 @@ public class GameManager {
             return; // Modifier handled it
         }
         
+        // Notify perk system of item collection
+        plugin.getPerkManager().onItemCollected(player, target);
+        
         // Default behavior for normal mode
         // Update score
         int newScore = playerPoints.getOrDefault(playerId, 0) + 1;
@@ -429,7 +447,13 @@ public class GameManager {
      */
     public void checkInventories() {
         // Use cached player list for better performance during frequent checks
-        for (Player player : getOnlinePlayersCached()) {
+        Collection<? extends Player> onlinePlayersCollection = getOnlinePlayersCached();
+        List<Player> onlinePlayers = new ArrayList<>(onlinePlayersCollection);
+        
+        // Update perk system
+        plugin.getPerkManager().onPeriodicUpdate(onlinePlayers);
+        
+        for (Player player : onlinePlayersCollection) {
             UUID playerId = player.getUniqueId();
             
             // Get target(s) from modifier system or default
@@ -465,6 +489,9 @@ public class GameManager {
         
         // Check if a modifier wants to handle this joker use
         if (plugin.getModifierManager().onJokerUsed(player)) {
+            // Notify perk system of joker use
+            plugin.getPerkManager().onJokerUsed(player);
+            
             // Remove one joker from inventory
             if (jokerItem != null && jokerItem.getAmount() > 1) {
                 jokerItem.setAmount(jokerItem.getAmount() - 1);
@@ -478,6 +505,9 @@ public class GameManager {
         int jokersLeft = playerJokers.getOrDefault(player.getUniqueId(), 0);
         
         if (jokersLeft > 0) {
+            // Notify perk system of joker use
+            plugin.getPerkManager().onJokerUsed(player);
+            
             // Process joker usage
             playerJokers.put(player.getUniqueId(), jokersLeft - 1);
             
@@ -545,6 +575,9 @@ public class GameManager {
         
         // Initialize player data if they don't have any (new player joining mid-game)
         if (!playerTargets.containsKey(playerId)) {
+            // Clear any existing effects for fresh start
+            clearAllEffects(player);
+            
             // Initialize player data
             playerTargets.put(playerId, getRandomMaterialForPlayer(playerId));
             playerPoints.put(playerId, 0);
@@ -555,6 +588,9 @@ public class GameManager {
             // Give them a backpack
             ItemStack backpack = plugin.createBackpackItem();
             plugin.giveItemOrDrop(player, backpack);
+            
+            // Grant all crafting recipes to the new player
+            grantAllRecipes(player);
 
             // Give them jokers
             if (currentJokersPerPlayer > 0) {
@@ -732,6 +768,133 @@ public class GameManager {
         
         if (displayTask != null && !displayTask.isCancelled()) {
             displayTask.cancel();
+        }
+    }
+    
+    /**
+     * Clear all potion effects from a player
+     * This ensures players start the game with a clean state
+     * 
+     * @param player The player to clear effects from
+     */
+    private void clearAllEffects(Player player) {
+        try {
+            // Get a copy of active effects to avoid concurrent modification
+            var activeEffects = new ArrayList<>(player.getActivePotionEffects());
+            
+            // Remove all active potion effects
+            for (var effect : activeEffects) {
+                player.removePotionEffect(effect.getType());
+            }
+            
+        } catch (Exception e) {
+            plugin.getLogger().warning("[Effects] Failed to clear effects for player " + player.getName() + ": " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Grant all available crafting recipes to a player using Minecraft command
+     * This enables players to craft any item they might need during the game
+     * 
+     * @param player The player to grant recipes to
+     */
+    private void grantAllRecipes(Player player) {
+        try {
+            // Use the Minecraft command to give all recipes to the player
+            // This is equivalent to: /recipe give @a *
+            String command = "recipe give " + player.getName() + " *";
+            
+            // Execute the command from the console
+            boolean success = Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
+            
+            if (success) {
+                player.sendMessage("§a§lAll Recipes Unlocked: §fAll Minecraft crafting recipes are now available!");
+                plugin.getLogger().info("[Recipes] Granted all recipes to player " + player.getName() + " via command");
+            } else {
+                plugin.getLogger().warning("[Recipes] Failed to execute recipe command for player " + player.getName());
+                // Fallback to manual method
+                grantRecipesManually(player);
+            }
+            
+        } catch (Exception e) {
+            plugin.getLogger().warning("[Recipes] Failed to grant recipes to player " + player.getName() + ": " + e.getMessage());
+            
+            // Fallback: Grant some essential recipes manually
+            grantRecipesManually(player);
+        }
+    }
+    
+    /**
+     * Grant recipes manually as a fallback method
+     * 
+     * @param player The player to grant recipes to
+     */
+    private void grantRecipesManually(Player player) {
+        try {
+            // Try to iterate through all available recipes first
+            int recipeCount = 0;
+            var recipeIterator = Bukkit.recipeIterator();
+            while (recipeIterator.hasNext()) {
+                Recipe recipe = recipeIterator.next();
+                if (recipe instanceof Keyed keyedRecipe) {
+                    NamespacedKey key = keyedRecipe.getKey();
+                    
+                    // Only add Minecraft recipes (not custom plugin recipes)
+                    if (key.getNamespace().equals("minecraft")) {
+                        if (!player.hasDiscoveredRecipe(key)) {
+                            player.discoverRecipe(key);
+                            recipeCount++;
+                        }
+                    }
+                }
+            }
+            
+            if (recipeCount > 0) {
+                player.sendMessage("§a§lRecipes Unlocked: §f" + recipeCount + " crafting recipes discovered!");
+                return;
+            }
+            
+            // If the above didn't work, try essential recipes
+            grantEssentialRecipes(player);
+            
+        } catch (Exception e) {
+            plugin.getLogger().warning("[Recipes] Manual recipe granting failed for player " + player.getName() + ": " + e.getMessage());
+            grantEssentialRecipes(player);
+        }
+    }
+    
+    /**
+     * Grant essential crafting recipes as a last resort fallback
+     * 
+     * @param player The player to grant essential recipes to
+     */
+    private void grantEssentialRecipes(Player player) {
+        try {
+            // List of essential recipe keys that players commonly need
+            String[] essentialRecipes = {
+                "crafting_table", "furnace", "chest", "stick", "wooden_pickaxe", "stone_pickaxe",
+                "iron_pickaxe", "wooden_axe", "stone_axe", "iron_axe", "wooden_shovel", "stone_shovel",
+                "iron_shovel", "wooden_sword", "stone_sword", "iron_sword", "bread", "torch",
+                "ladder", "iron_ingot_from_iron_ore", "gold_ingot_from_gold_ore", "bucket",
+                "iron_boots", "iron_leggings", "iron_chestplate", "iron_helmet", "bow", "arrow",
+                "stone_bricks", "smooth_stone", "glass", "paper", "book", "bookshelf"
+            };
+            
+            int grantedCount = 0;
+            for (String recipeId : essentialRecipes) {
+                NamespacedKey key = NamespacedKey.minecraft(recipeId);
+                if (!player.hasDiscoveredRecipe(key)) {
+                    player.discoverRecipe(key);
+                    grantedCount++;
+                }
+            }
+            
+            if (grantedCount > 0) {
+                player.sendMessage("§a§lEssential Recipes: §f" + grantedCount + " essential crafting recipes unlocked!");
+            }
+            
+        } catch (Exception e) {
+            plugin.getLogger().warning("[Recipes] Failed to grant essential recipes to player " + player.getName() + ": " + e.getMessage());
         }
     }
 }

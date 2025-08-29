@@ -5,6 +5,7 @@
 - tune down sounds, consistent sounds
 - make sure that only 1 player can have the start game gui open at a time
 - add sounds to startgame gui
-- make sure that back button in stargame gui actually discards changes and only confirm saves th
-- give all recipes
-- food perk
+- make sure that back button in stargame gui actually discards changes and only confirm saves the modifications
+- faster furnaces perk
+- fix bug where jokers disappear randomly?
+- backpack disappears when inv full
