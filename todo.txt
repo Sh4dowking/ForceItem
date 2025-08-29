@@ -1,12 +1,5 @@
 - alli s gliche item
-- polish item list
-- concrete/glazed + farbitems
-- potions
 - settings for game start
 - Velocity + world reset
-- Warped/Crimson
-- glass panes
-- remove palyer locator bar (optional)
 - smaller biomes setting
-- /givejoker command
-- fix ingame join -> players should receive jokers (check if player is completely new)
+- consistent clean colors everywhere

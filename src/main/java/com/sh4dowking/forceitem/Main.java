@@ -122,6 +122,16 @@ public class Main extends JavaPlugin implements Listener {
         // Initialize and register GUI components
         itemInfoGUI = new ItemInfoGUI();
         getServer().getPluginManager().registerEvents(itemInfoGUI, this);
+        
+        // Initialize and register command handler
+        CommandHandler commandHandler = new CommandHandler(this);
+        getCommand("startgame").setExecutor(commandHandler);
+        getCommand("stopgame").setExecutor(commandHandler);
+        getCommand("leaderboard").setExecutor(commandHandler);
+        getCommand("item").setExecutor(commandHandler);
+        getCommand("skip").setExecutor(commandHandler);
+        getCommand("givejoker").setExecutor(commandHandler);
+        
         getLogger().info("ForceItem plugin has been enabled!");
     }
 
@@ -160,177 +170,128 @@ public class Main extends JavaPlugin implements Listener {
         getLogger().info("ForceItem plugin has been disabled!");
     }
 
-    /**
-     * Handle all plugin commands
-     * 
-     * @param sender Command sender (player or console)
-     * @param command The command being executed
-     * @param label Command alias used
-     * @param args Command arguments
-     * @return true if command was handled successfully
-     */
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        
-        // Start a new ForceItem game
-        if (command.getName().equalsIgnoreCase("startgame")) {
-            if (gameRunning) {
-                sender.sendMessage("§cA game is already running! Use /stopgame to stop it first.");
-                return true;
-            }
-            
-            if (args.length != 2) {
-                sender.sendMessage("§cUsage: /startgame <seconds> <number of jokers>");
-                return true;
-            }
-            
-            try {
-                int seconds = Integer.parseInt(args[0]);
-                int jokers = Integer.parseInt(args[1]);
-                
-                if (seconds <= 0) {
-                    sender.sendMessage("§cTime must be greater than 0 seconds.");
-                    return true;
-                }
-                if (jokers < 0) {
-                    sender.sendMessage("§cNumber of jokers cannot be negative.");
-                    return true;
-                }
-                
-                startGame(seconds, jokers);
-            } catch (NumberFormatException e) {
-                sender.sendMessage("§cPlease enter valid numbers for time and jokers.");
-            }
-            return true;
-        }
-        
-        if (command.getName().equalsIgnoreCase("stopgame")) {
-            if (gameRunning) {
-                stopGame();
-                sender.sendMessage("§cGame stopped.");
-            } else {
-                sender.sendMessage("§cNo game is currently running.");
-            }
-            return true;
-        }
-        
-        if (command.getName().equalsIgnoreCase("leaderboard")) {
-            if (sender instanceof Player player) {
-                if (leaderboardGUI != null) {
-                    leaderboardGUI.showLeaderboard(player);
-                } else {
-                    player.sendMessage("§cNo game data available. Start a game first!");
-                }
-            } else {
-                if (sender != null) {
-                    sender.sendMessage("§cOnly players can view the leaderboard GUI.");
-                }
-            }
-            return true;
-        }
-        
-        if (command.getName().equalsIgnoreCase("item")) {
-            if (sender instanceof Player player) {
-                if (gameRunning) {
-                    Material target = playerTargets.get(player.getUniqueId());
-                    if (target != null) {
-                        // Play item info sound
-                        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
-                        itemInfoGUI.openItemInfo(player, target);
-                    } else {
-                        player.sendMessage("§cYou don't have a target item assigned!");
-                        // Play error sound
-                        player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 0.5f, 1.0f);
-                    }
-                } else {
-                    player.sendMessage("§cNo game is currently running!");
-                    // Play error sound
-                    player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 0.5f, 1.0f);
-                }
-            } else {
-                if (sender != null) {
-                    sender.sendMessage("§cOnly players can use this command!");
-                }
-            }
-            return true;
-        }
-        
-        if (command.getName().equalsIgnoreCase("skip")) {
-            // Check if sender has operator privileges
-            if (!sender.isOp()) {
-                sender.sendMessage("§cYou must have operator privileges to use this command!");
-                return true;
-            }
-            
-            // Check if game is running
-            if (!gameRunning) {
-                sender.sendMessage("§cNo game is currently running! Start a game first with /startgame.");
-                return true;
-            }
-            
-            // Check argument count
-            if (args.length != 1) {
-                sender.sendMessage("§cUsage: /skip <playername>");
-                return true;
-            }
-            
-            // Find the target player
-            String playerName = args[0];
-            Player targetPlayer = Bukkit.getPlayer(playerName);
-            
-            if (targetPlayer == null) {
-                sender.sendMessage("§cPlayer '" + playerName + "' is not online!");
-                return true;
-            }
-            
-            // Check if player is in the game (has a target)
-            UUID targetUUID = targetPlayer.getUniqueId();
-            if (!playerTargets.containsKey(targetUUID)) {
-                sender.sendMessage("§cPlayer '" + playerName + "' is not participating in the current game!");
-                return true;
-            }
-            
-            // Get current target for feedback
-            Material currentTarget = playerTargets.get(targetUUID);
-            String currentTargetName = currentTarget != null ? formatMaterialName(currentTarget) : "Unknown";
-            
-            // Assign new target without affecting jokers or points
-            Material newTarget = getRandomMaterialForPlayer(targetUUID);
-            playerTargets.put(targetUUID, newTarget);
-            
-            // Notify the target player
-            targetPlayer.sendMessage("§e⚡ Your item has been skipped by an administrator!");
-            targetPlayer.sendMessage("§f§lNew target: §b" + formatMaterialName(newTarget));
-            targetPlayer.playSound(targetPlayer.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
-            
-            // Update player display immediately
-            updatePlayerDisplay(targetPlayer);
-            
-            // Notify the command sender
-            sender.sendMessage("§aSuccessfully skipped §f" + playerName + "§a's target!");
-            sender.sendMessage("§7Previous target: §c" + currentTargetName);
-            targetPlayer.sendMessage("§f§lNew target: §b" + formatMaterialName(newTarget));
-
-            // Broadcast to all players (optional - you can remove this if you want it to be silent)
-            for (Player player : Bukkit.getOnlinePlayers()) {
-                if (player != targetPlayer && player != sender) {
-                    player.sendMessage("§7Administrator skipped §f" + playerName + "§7's target item.");
-                }
-            }
-            
-            return true;
-        }
-        
-        return false;
+    // ===============================
+    // PUBLIC ACCESSOR METHODS FOR COMMAND HANDLER
+    // ===============================
+    
+    public boolean isGameRunning() {
+        return gameRunning;
     }
-
-    /**
-     * Initialize and start a new ForceItem game
-     * 
-     * @param seconds Duration of the game in seconds
-     * @param jokersPerPlayer Number of jokers each player receives
-     */
-    private void startGame(int seconds, int jokersPerPlayer) {
+    
+    public LeaderboardGUI getLeaderboardGUI() {
+        return leaderboardGUI;
+    }
+    
+    public ItemInfoGUI getItemInfoGUI() {
+        return itemInfoGUI;
+    }
+    
+    public Material getPlayerTarget(UUID playerId) {
+        return playerTargets.get(playerId);
+    }
+    
+    public boolean hasPlayerTarget(UUID playerId) {
+        return playerTargets.containsKey(playerId);
+    }
+    
+    public void setPlayerTarget(UUID playerId, Material target) {
+        playerTargets.put(playerId, target);
+    }
+    
+    public int getPlayerJokers(UUID playerId) {
+        return playerJokers.getOrDefault(playerId, 0);
+    }
+    
+    public void setPlayerJokers(UUID playerId, int jokers) {
+        playerJokers.put(playerId, jokers);
+    }
+    
+    public String formatMaterialName(Material material) {
+        String raw = material.name().toLowerCase().replace("_", " ");
+        String[] words = raw.split(" ");
+        StringBuilder sb = new StringBuilder();
+        for (String word : words) {
+            if (word.length() > 0) {
+                sb.append(Character.toUpperCase(word.charAt(0)))
+                  .append(word.substring(1))
+                  .append(" ");
+            }
+        }
+        return sb.toString().trim();
+    }
+    
+    public Material getRandomMaterialForPlayer(UUID playerId) {
+        Set<Material> assignedTargets = playerAssignedTargets.getOrDefault(playerId, new HashSet<>());
+        
+        // If player has been assigned all possible materials (very unlikely), reset their assigned targets
+        if (assignedTargets.size() >= SurvivalItems.getAllSurvivalItems().size()) {
+            assignedTargets.clear();
+            playerAssignedTargets.put(playerId, assignedTargets);
+        }
+        
+        Material newTarget;
+        int attempts = 0;
+        int maxAttempts = 50; // Prevent infinite loops
+        
+        do {
+            newTarget = SurvivalItems.getRandomMaterial();
+            attempts++;
+        } while (assignedTargets.contains(newTarget) && attempts < maxAttempts);
+        
+        // Add the new target to the player's assigned targets set
+        assignedTargets.add(newTarget);
+        playerAssignedTargets.put(playerId, assignedTargets);
+        
+        return newTarget;
+    }
+    
+    public ItemStack createJokerItem() {
+        ItemStack joker = new ItemStack(Material.BARRIER);
+        ItemMeta meta = joker.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(ChatColor.DARK_RED + "★ " + ChatColor.BOLD + "Joker");
+            meta.setLore(Arrays.asList(
+                ChatColor.WHITE + "Right-click to skip your current target!",
+                ChatColor.GRAY + "Grants +1 point when used",
+                ChatColor.RED + "Cannot be placed."
+            ));
+            joker.setItemMeta(meta);
+        }
+        return joker;
+    }
+    
+    public void updatePlayerDisplay(Player player) {
+        Material target = playerTargets.get(player.getUniqueId());
+        if (target != null) {
+            int points = playerPoints.getOrDefault(player.getUniqueId(), 0);
+            
+            // Update boss bar title (text will show at top, but bar itself is invisible)
+            String targetName = formatMaterialName(target);
+            String displayText = "§f§lTarget: §b" + targetName + " §7| §f§lPoints: §a" + points;
+            
+            BossBar playerBossBar = playerBossBars.get(player.getUniqueId());
+            if (playerBossBar != null) {
+                playerBossBar.setTitle(displayText);
+                // Ensure the bar remains invisible
+                playerBossBar.setProgress(0.0);
+            }
+        }
+    }
+    
+    public void giveItemOrDrop(Player player, ItemStack item) {
+        // Try to add the item to the player's inventory
+        HashMap<Integer, ItemStack> leftover = player.getInventory().addItem(item);
+        
+        // If there are leftover items (inventory was full), drop them near the player
+        if (!leftover.isEmpty()) {
+            for (ItemStack droppedItem : leftover.values()) {
+                player.getWorld().dropItemNaturally(player.getLocation(), droppedItem);
+            }
+            player.sendMessage("§e⚠ Your inventory was full! The item was dropped near you.");
+        }
+    }
+    
+    public void startGame(int seconds, int jokersPerPlayer) {
         gameRunning = true;
         currentJokersPerPlayer = jokersPerPlayer;
         
@@ -365,6 +326,54 @@ public class Main extends JavaPlugin implements Listener {
         Bukkit.broadcastMessage("§f§lTime: §b" + seconds + "s §7| §f§lJokers: §b" + jokersPerPlayer);
         // Start countdown with title display
         startCountdownAndGame(seconds, jokersPerPlayer);
+    }
+    
+    public void stopGame() {
+        gameRunning = false;
+        currentJokersPerPlayer = 0;
+        
+        // Cancel the game timer
+        if (timer != null) timer.cancel();
+        
+        // Stop display systems (boss bar, action bar updates)
+        stopDisplaySystem();
+        
+        // Initialize leaderboard GUI for result viewing
+        leaderboardGUI = new LeaderboardGUI(this, playerCollectedItems, playerPoints, playerCollectionHistory, gameStartTime);
+        Bukkit.getPluginManager().registerEvents(leaderboardGUI, this);
+        
+        // Announce game end
+        Bukkit.broadcastMessage("§f§lForceItem §7game ended!");
+        
+        // Schedule leaderboard display after brief delay
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                leaderboardGUI.showLeaderboard(player);
+                // Play game end and leaderboard reveal sound
+                player.playSound(player.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 0.8f, 1.0f);
+            }
+        }, 20L); // Delay 1 second to let end message show
+        
+        // Also show text summary
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            int points = playerPoints.getOrDefault(player.getUniqueId(), 0);
+            player.sendMessage("§f§lYour final score: §a" + points + " points");
+            player.sendMessage("§7Leaderboard GUI will open shortly! Use §f/leaderboard §7to view it again.");
+        }
+    }
+
+    // ===============================
+    // END OF PUBLIC ACCESSOR METHODS
+    // ===============================
+
+    /**
+     * Initialize and start a new ForceItem game
+     * 
+     * @param seconds Duration of the game in seconds
+     * @param jokersPerPlayer Number of jokers each player receives
+     */
+    private void startGame(int seconds, int jokersPerPlayer) {
+        // This is now handled by the public method above
     }
     
     /**
@@ -895,7 +904,11 @@ public class Main extends JavaPlugin implements Listener {
                 // Give them a backpack
                 ItemStack backpack = createBackpackItem();
                 giveItemOrDrop(player, backpack);
-                
+
+                // Give them a backpack
+                ItemStack joker = createJokerItem();
+                giveItemOrDrop(player, joker);
+
                 // Create their personal backpack inventory
                 Inventory backpackInv = Bukkit.createInventory(null, 27, player.getName() + "'s Backpack");
                 playerBackpacks.put(playerId, backpackInv);

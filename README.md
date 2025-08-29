@@ -62,8 +62,8 @@ ForceItem challenges players to quickly gather specific items from the survival 
 
 ### Command Examples
 ```
-/startgame 300 3    # 5-minute game, 3 jokers per player
-/startgame 120 0    # 2-minute game, no jokers
+/startgame 1800 3    # 30-minute game, 3 jokers per player
+/startgame 900 0    # 15-minute game, no jokers
 /skip PlayerName    # Admin skips PlayerName's current target
 /stopgame           # Emergency stop
 ```

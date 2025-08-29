@@ -32,6 +32,11 @@ commands:
     usage: /skip <playername>
     permission: forceitem.admin
     permission-message: §cYou don't have permission to skip player items!
+  givejoker:
+    description: Give jokers to a specified player during an active game
+    usage: /givejoker <playername> <amount>
+    permission: forceitem.admin
+    permission-message: §cYou don't have permission to give jokers!
 
 permissions:
   forceitem.*:

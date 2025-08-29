@@ -77,6 +77,16 @@ public class SurvivalItems {
         Material.BAMBOO_TRAPDOOR, Material.BAMBOO_PRESSURE_PLATE, Material.BAMBOO_BUTTON, Material.BAMBOO_SIGN,
         Material.BAMBOO_HANGING_SIGN, Material.BAMBOO_RAFT, Material.BAMBOO_CHEST_RAFT,
         
+        // Warped and Crimson wood types (from Nether)
+        Material.WARPED_STEM, Material.WARPED_HYPHAE, Material.STRIPPED_WARPED_STEM, Material.STRIPPED_WARPED_HYPHAE,
+        Material.WARPED_PLANKS, Material.WARPED_STAIRS, Material.WARPED_SLAB, Material.WARPED_FENCE, Material.WARPED_FENCE_GATE,
+        Material.WARPED_DOOR, Material.WARPED_TRAPDOOR, Material.WARPED_PRESSURE_PLATE, Material.WARPED_BUTTON,
+        Material.WARPED_SIGN, Material.WARPED_HANGING_SIGN,
+        Material.CRIMSON_STEM, Material.CRIMSON_HYPHAE, Material.STRIPPED_CRIMSON_STEM, Material.STRIPPED_CRIMSON_HYPHAE,
+        Material.CRIMSON_PLANKS, Material.CRIMSON_STAIRS, Material.CRIMSON_SLAB, Material.CRIMSON_FENCE, Material.CRIMSON_FENCE_GATE,
+        Material.CRIMSON_DOOR, Material.CRIMSON_TRAPDOOR, Material.CRIMSON_PRESSURE_PLATE, Material.CRIMSON_BUTTON,
+        Material.CRIMSON_SIGN, Material.CRIMSON_HANGING_SIGN,
+        
         // Stone types
         Material.COBBLESTONE, Material.COBBLESTONE_STAIRS, Material.COBBLESTONE_SLAB, Material.COBBLESTONE_WALL,
         Material.MOSSY_COBBLESTONE, Material.MOSSY_COBBLESTONE_STAIRS, Material.MOSSY_COBBLESTONE_SLAB, Material.MOSSY_COBBLESTONE_WALL,
@@ -84,6 +94,20 @@ public class SurvivalItems {
         Material.STONE_BRICK_STAIRS, Material.STONE_BRICK_SLAB, Material.STONE_BRICK_WALL,
         Material.MOSSY_STONE_BRICK_STAIRS, Material.MOSSY_STONE_BRICK_SLAB, Material.MOSSY_STONE_BRICK_WALL,
         Material.SMOOTH_STONE, Material.SMOOTH_STONE_SLAB,
+        
+        // Additional polished stone variants
+        Material.GRANITE_STAIRS, Material.GRANITE_SLAB, Material.GRANITE_WALL,
+        Material.POLISHED_GRANITE_STAIRS, Material.POLISHED_GRANITE_SLAB,
+        Material.DIORITE_STAIRS, Material.DIORITE_SLAB, Material.DIORITE_WALL,
+        Material.POLISHED_DIORITE_STAIRS, Material.POLISHED_DIORITE_SLAB,
+        Material.ANDESITE_STAIRS, Material.ANDESITE_SLAB, Material.ANDESITE_WALL,
+        Material.POLISHED_ANDESITE_STAIRS, Material.POLISHED_ANDESITE_SLAB,
+        Material.COBBLED_DEEPSLATE_STAIRS, Material.COBBLED_DEEPSLATE_SLAB, Material.COBBLED_DEEPSLATE_WALL,
+        Material.POLISHED_DEEPSLATE_STAIRS, Material.POLISHED_DEEPSLATE_SLAB, Material.POLISHED_DEEPSLATE_WALL,
+        Material.DEEPSLATE_BRICKS, Material.DEEPSLATE_BRICK_STAIRS, Material.DEEPSLATE_BRICK_SLAB, Material.DEEPSLATE_BRICK_WALL,
+        Material.CRACKED_DEEPSLATE_BRICKS, Material.DEEPSLATE_TILES, Material.DEEPSLATE_TILE_STAIRS, 
+        Material.DEEPSLATE_TILE_SLAB, Material.DEEPSLATE_TILE_WALL, Material.CRACKED_DEEPSLATE_TILES,
+        Material.CHISELED_DEEPSLATE,
         
         // Ores and minerals
         Material.COAL, Material.COAL_BLOCK, Material.RAW_COPPER, Material.RAW_COPPER_BLOCK,
@@ -93,6 +117,12 @@ public class SurvivalItems {
         Material.LAPIS_LAZULI, Material.LAPIS_BLOCK, Material.DIAMOND, Material.DIAMOND_BLOCK, Material.REDSTONE, Material.REDSTONE_BLOCK,
         Material.EMERALD, Material.EMERALD_BLOCK, Material.NETHERITE_SCRAP, Material.ANCIENT_DEBRIS, Material.AMETHYST_SHARD, Material.AMETHYST_BLOCK,
         
+        // Ocean blocks and materials
+        Material.PRISMARINE, Material.PRISMARINE_STAIRS, Material.PRISMARINE_SLAB, Material.PRISMARINE_WALL,
+        Material.PRISMARINE_BRICKS, Material.PRISMARINE_BRICK_STAIRS, Material.PRISMARINE_BRICK_SLAB,
+        Material.DARK_PRISMARINE, Material.DARK_PRISMARINE_STAIRS, Material.DARK_PRISMARINE_SLAB,
+        Material.SPONGE, Material.WET_SPONGE,
+        
         // Tools and weapons
         Material.WOODEN_SWORD, Material.WOODEN_PICKAXE, Material.WOODEN_AXE, Material.WOODEN_SHOVEL, Material.WOODEN_HOE,
         Material.STONE_SWORD, Material.STONE_PICKAXE, Material.STONE_AXE, Material.STONE_SHOVEL, Material.STONE_HOE,
@@ -101,6 +131,14 @@ public class SurvivalItems {
         Material.DIAMOND_SWORD, Material.DIAMOND_PICKAXE, Material.DIAMOND_AXE, Material.DIAMOND_SHOVEL, Material.DIAMOND_HOE,
         Material.BOW, Material.CROSSBOW, Material.SHIELD, Material.FISHING_ROD,
         Material.FLINT_AND_STEEL, Material.SHEARS, Material.COMPASS, Material.CLOCK, Material.SPYGLASS,
+        
+        // Buckets and containers
+        Material.BUCKET, Material.WATER_BUCKET, Material.LAVA_BUCKET, Material.POWDER_SNOW_BUCKET,
+        Material.AXOLOTL_BUCKET, Material.COD_BUCKET, Material.SALMON_BUCKET, Material.TROPICAL_FISH_BUCKET, Material.PUFFERFISH_BUCKET,
+        
+        // Projectiles and throwables
+        Material.ARROW, Material.SPECTRAL_ARROW, Material.SNOWBALL, Material.ENDER_PEARL, Material.ENDER_EYE,
+        Material.FIREWORK_ROCKET,
         
         // Armor
         Material.LEATHER_HELMET, Material.LEATHER_CHESTPLATE, Material.LEATHER_LEGGINGS, Material.LEATHER_BOOTS,
@@ -152,8 +190,12 @@ public class SurvivalItems {
         Material.LEVER, Material.STONE_PRESSURE_PLATE, Material.HEAVY_WEIGHTED_PRESSURE_PLATE,
         Material.LIGHT_WEIGHTED_PRESSURE_PLATE, Material.STONE_BUTTON, Material.TRIPWIRE_HOOK,
         Material.DAYLIGHT_DETECTOR, Material.REDSTONE_LAMP, Material.TNT, Material.DISPENSER, Material.DROPPER,
-        Material.HOPPER, Material.PISTON,
+        Material.HOPPER, Material.PISTON, Material.STICKY_PISTON,
         Material.OBSERVER, Material.TARGET, Material.LIGHTNING_ROD,
+        
+        // Transportation and rails
+        Material.MINECART, Material.CHEST_MINECART, Material.FURNACE_MINECART, Material.HOPPER_MINECART, 
+        Material.TNT_MINECART, Material.RAIL, Material.POWERED_RAIL, Material.DETECTOR_RAIL, Material.ACTIVATOR_RAIL,
         
         // Utility blocks
         Material.CHEST, Material.TRAPPED_CHEST, Material.ENDER_CHEST, Material.BARREL,
@@ -164,11 +206,34 @@ public class SurvivalItems {
         Material.LECTERN, Material.BREWING_STAND, Material.END_CRYSTAL, Material.ITEM_FRAME, Material.GLOW_ITEM_FRAME,
         Material.PAINTING, Material.ARMOR_STAND, Material.FLOWER_POT,
         
+        // Decorative and structural blocks
+        Material.IRON_BARS, Material.CHAIN, Material.LANTERN, Material.SOUL_LANTERN,
+        Material.BELL, Material.SCAFFOLDING,
+        
         // Dyes and wool
         Material.WHITE_WOOL, Material.ORANGE_WOOL, Material.MAGENTA_WOOL, Material.LIGHT_BLUE_WOOL,
         Material.YELLOW_WOOL, Material.LIME_WOOL, Material.PINK_WOOL, Material.GRAY_WOOL,
         Material.LIGHT_GRAY_WOOL, Material.CYAN_WOOL, Material.PURPLE_WOOL, Material.BLUE_WOOL,
         Material.BROWN_WOOL, Material.GREEN_WOOL, Material.RED_WOOL, Material.BLACK_WOOL,
+        
+        // Carpets
+        Material.WHITE_CARPET, Material.ORANGE_CARPET, Material.MAGENTA_CARPET, Material.LIGHT_BLUE_CARPET,
+        Material.YELLOW_CARPET, Material.LIME_CARPET, Material.PINK_CARPET, Material.GRAY_CARPET,
+        Material.LIGHT_GRAY_CARPET, Material.CYAN_CARPET, Material.PURPLE_CARPET, Material.BLUE_CARPET,
+        Material.BROWN_CARPET, Material.GREEN_CARPET, Material.RED_CARPET, Material.BLACK_CARPET,
+        
+        // Beds
+        Material.WHITE_BED, Material.ORANGE_BED, Material.MAGENTA_BED, Material.LIGHT_BLUE_BED,
+        Material.YELLOW_BED, Material.LIME_BED, Material.PINK_BED, Material.GRAY_BED,
+        Material.LIGHT_GRAY_BED, Material.CYAN_BED, Material.PURPLE_BED, Material.BLUE_BED,
+        Material.BROWN_BED, Material.GREEN_BED, Material.RED_BED, Material.BLACK_BED,
+        
+        // Banners
+        Material.WHITE_BANNER, Material.ORANGE_BANNER, Material.MAGENTA_BANNER, Material.LIGHT_BLUE_BANNER,
+        Material.YELLOW_BANNER, Material.LIME_BANNER, Material.PINK_BANNER, Material.GRAY_BANNER,
+        Material.LIGHT_GRAY_BANNER, Material.CYAN_BANNER, Material.PURPLE_BANNER, Material.BLUE_BANNER,
+        Material.BROWN_BANNER, Material.GREEN_BANNER, Material.RED_BANNER, Material.BLACK_BANNER,
+        
         Material.WHITE_DYE, Material.ORANGE_DYE, Material.MAGENTA_DYE, Material.LIGHT_BLUE_DYE,
         Material.YELLOW_DYE, Material.LIME_DYE, Material.PINK_DYE, Material.GRAY_DYE,
         Material.LIGHT_GRAY_DYE, Material.CYAN_DYE, Material.PURPLE_DYE, Material.BLUE_DYE,
@@ -180,11 +245,44 @@ public class SurvivalItems {
         Material.PINK_STAINED_GLASS, Material.GRAY_STAINED_GLASS, Material.LIGHT_GRAY_STAINED_GLASS,
         Material.CYAN_STAINED_GLASS, Material.PURPLE_STAINED_GLASS, Material.BLUE_STAINED_GLASS,
         Material.BROWN_STAINED_GLASS, Material.GREEN_STAINED_GLASS, Material.RED_STAINED_GLASS,
-        Material.BLACK_STAINED_GLASS, Material.TERRACOTTA, Material.WHITE_TERRACOTTA, Material.ORANGE_TERRACOTTA,
+        Material.BLACK_STAINED_GLASS, 
+        
+        // Glass panes
+        Material.GLASS_PANE, Material.WHITE_STAINED_GLASS_PANE, Material.ORANGE_STAINED_GLASS_PANE, Material.MAGENTA_STAINED_GLASS_PANE,
+        Material.LIGHT_BLUE_STAINED_GLASS_PANE, Material.YELLOW_STAINED_GLASS_PANE, Material.LIME_STAINED_GLASS_PANE,
+        Material.PINK_STAINED_GLASS_PANE, Material.GRAY_STAINED_GLASS_PANE, Material.LIGHT_GRAY_STAINED_GLASS_PANE,
+        Material.CYAN_STAINED_GLASS_PANE, Material.PURPLE_STAINED_GLASS_PANE, Material.BLUE_STAINED_GLASS_PANE,
+        Material.BROWN_STAINED_GLASS_PANE, Material.GREEN_STAINED_GLASS_PANE, Material.RED_STAINED_GLASS_PANE,
+        Material.BLACK_STAINED_GLASS_PANE,
+        
+        // Terracotta, concrete, and concrete powder
+        Material.TERRACOTTA, Material.WHITE_TERRACOTTA, Material.ORANGE_TERRACOTTA,
         Material.MAGENTA_TERRACOTTA, Material.LIGHT_BLUE_TERRACOTTA, Material.YELLOW_TERRACOTTA,
         Material.LIME_TERRACOTTA, Material.PINK_TERRACOTTA, Material.GRAY_TERRACOTTA, Material.LIGHT_GRAY_TERRACOTTA,
         Material.CYAN_TERRACOTTA, Material.PURPLE_TERRACOTTA, Material.BLUE_TERRACOTTA, Material.BROWN_TERRACOTTA,
         Material.GREEN_TERRACOTTA, Material.RED_TERRACOTTA, Material.BLACK_TERRACOTTA,
+        
+        // Glazed terracotta
+        Material.WHITE_GLAZED_TERRACOTTA, Material.ORANGE_GLAZED_TERRACOTTA, Material.MAGENTA_GLAZED_TERRACOTTA,
+        Material.LIGHT_BLUE_GLAZED_TERRACOTTA, Material.YELLOW_GLAZED_TERRACOTTA, Material.LIME_GLAZED_TERRACOTTA,
+        Material.PINK_GLAZED_TERRACOTTA, Material.GRAY_GLAZED_TERRACOTTA, Material.LIGHT_GRAY_GLAZED_TERRACOTTA,
+        Material.CYAN_GLAZED_TERRACOTTA, Material.PURPLE_GLAZED_TERRACOTTA, Material.BLUE_GLAZED_TERRACOTTA,
+        Material.BROWN_GLAZED_TERRACOTTA, Material.GREEN_GLAZED_TERRACOTTA, Material.RED_GLAZED_TERRACOTTA,
+        Material.BLACK_GLAZED_TERRACOTTA,
+        
+        // Concrete
+        Material.WHITE_CONCRETE, Material.ORANGE_CONCRETE, Material.MAGENTA_CONCRETE,
+        Material.LIGHT_BLUE_CONCRETE, Material.YELLOW_CONCRETE, Material.LIME_CONCRETE,
+        Material.PINK_CONCRETE, Material.GRAY_CONCRETE, Material.LIGHT_GRAY_CONCRETE,
+        Material.CYAN_CONCRETE, Material.PURPLE_CONCRETE, Material.BLUE_CONCRETE,
+        Material.BROWN_CONCRETE, Material.GREEN_CONCRETE, Material.RED_CONCRETE, Material.BLACK_CONCRETE,
+        
+        // Concrete powder
+        Material.WHITE_CONCRETE_POWDER, Material.ORANGE_CONCRETE_POWDER, Material.MAGENTA_CONCRETE_POWDER,
+        Material.LIGHT_BLUE_CONCRETE_POWDER, Material.YELLOW_CONCRETE_POWDER, Material.LIME_CONCRETE_POWDER,
+        Material.PINK_CONCRETE_POWDER, Material.GRAY_CONCRETE_POWDER, Material.LIGHT_GRAY_CONCRETE_POWDER,
+        Material.CYAN_CONCRETE_POWDER, Material.PURPLE_CONCRETE_POWDER, Material.BLUE_CONCRETE_POWDER,
+        Material.BROWN_CONCRETE_POWDER, Material.GREEN_CONCRETE_POWDER, Material.RED_CONCRETE_POWDER, Material.BLACK_CONCRETE_POWDER,
         
         // Miscellaneous items
         Material.STICK, Material.BOWL, Material.STRING, Material.FEATHER, Material.FLINT, Material.LEATHER,
