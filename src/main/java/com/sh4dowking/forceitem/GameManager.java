@@ -1,6 +1,8 @@
 package com.sh4dowking.forceitem;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -47,12 +49,34 @@ public class GameManager {
     private final Map<UUID, List<CollectionEvent>> playerCollectionHistory = new HashMap<>();
     private final Map<UUID, Set<Material>> playerAssignedTargets = new HashMap<>();
     
-    // Display systems
+    // Display systems - performance optimized
     private final Map<UUID, BossBar> playerBossBars = new HashMap<>();
     private BukkitRunnable displayTask;
     
+    // Performance optimization: cache online players list
+    private Collection<? extends Player> cachedOnlinePlayers = Collections.emptyList();
+    private long lastPlayerListUpdate = 0;
+    private static final long PLAYER_LIST_CACHE_DURATION = 500; // 500ms cache for better performance
+    
     public GameManager(Main plugin) {
         this.plugin = plugin;
+    }
+    
+    // ===============================
+    // PERFORMANCE OPTIMIZATION METHODS
+    // ===============================
+    
+    /**
+     * Get cached online players list to reduce frequent Bukkit.getOnlinePlayers() calls
+     * Updates cache every 500ms to balance performance with accuracy
+     */
+    private Collection<? extends Player> getOnlinePlayersCached() {
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastPlayerListUpdate > PLAYER_LIST_CACHE_DURATION) {
+            cachedOnlinePlayers = Bukkit.getOnlinePlayers();
+            lastPlayerListUpdate = currentTime;
+        }
+        return cachedOnlinePlayers;
     }
     
     // ===============================
@@ -297,33 +321,52 @@ public class GameManager {
     // ===============================
     
     /**
+     * Handle when a player collects their target item (either via pickup or inventory check)
+     * Consolidated method to avoid code duplication and improve performance
+     * 
+     * @param player The player who collected the item
+     * @param target The target material that was collected
+     */
+    public void handleTargetItemPickup(Player player, Material target) {
+        UUID playerId = player.getUniqueId();
+        
+        // Update score
+        int newScore = playerPoints.getOrDefault(playerId, 0) + 1;
+        playerPoints.put(playerId, newScore);
+        
+        // Add to collected items
+        playerCollectedItems.get(playerId).add(target);
+        
+        // Record collection event
+        playerCollectionHistory.get(playerId).add(new CollectionEvent(target, System.currentTimeMillis(), false));
+        
+        // Play success sound for the player
+        if (player.getLocation() != null) {
+            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.8f, 1.2f);
+        }
+        
+        player.sendMessage("§a✓ You collected your item! +1 point!");
+        
+        // Assign new target
+        Material newTarget = getRandomMaterialForPlayer(playerId);
+        playerTargets.put(playerId, newTarget);
+        player.sendMessage("§f§lNew target: §b" + plugin.formatMaterialName(newTarget));
+        
+        // Update display immediately
+        updatePlayerDisplay(player);
+    }
+    
+    /**
      * Check all player inventories for target items
-     * Called periodically by the countdown timer
+     * Called periodically by the countdown timer - performance optimized
      */
     public void checkInventories() {
-        for (Player player : Bukkit.getOnlinePlayers()) {
+        // Use cached player list for better performance during frequent checks
+        for (Player player : getOnlinePlayersCached()) {
             Material target = playerTargets.get(player.getUniqueId());
             if (target != null && player.getInventory().contains(target)) {
-                int newScore = playerPoints.get(player.getUniqueId()) + 1;
-                playerPoints.put(player.getUniqueId(), newScore);
-                
-                // Add to collected items
-                playerCollectedItems.get(player.getUniqueId()).add(target);
-                
-                // Record collection event
-                playerCollectionHistory.get(player.getUniqueId()).add(new CollectionEvent(target, System.currentTimeMillis(), false));
-                
-                // Play success sound for the player
-                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.8f, 1.2f);
-                
-                player.sendMessage("§a✓ You collected your item! +1 point!");
-                // Assign new target
-                Material newTarget = getRandomMaterialForPlayer(player.getUniqueId());
-                playerTargets.put(player.getUniqueId(), newTarget);
-                player.sendMessage("§f§lNew target: §b" + plugin.formatMaterialName(newTarget));
-                
-                // Update display immediately
-                updatePlayerDisplay(player);
+                // Use consolidated method for consistent behavior
+                handleTargetItemPickup(player, target);
             }
         }
     }
@@ -385,37 +428,6 @@ public class GameManager {
             player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
             player.sendMessage("§cYou have no jokers left!");
             return false;
-        }
-    }
-    
-    /**
-     * Handle when a player picks up their target item
-     * 
-     * @param player The player who picked up the item
-     * @param targetMaterial The material that was picked up
-     */
-    public void handleTargetItemPickup(Player player, Material targetMaterial) {
-        if (!gameRunning) return;
-        
-        Material target = playerTargets.get(player.getUniqueId());
-        if (target != null && targetMaterial == target) {
-            int newScore = playerPoints.get(player.getUniqueId()) + 1;
-            playerPoints.put(player.getUniqueId(), newScore);
-            
-            // Add to collected items
-            playerCollectedItems.get(player.getUniqueId()).add(target);
-            
-            // Record collection event
-            playerCollectionHistory.get(player.getUniqueId()).add(new CollectionEvent(target, System.currentTimeMillis(), false));
-            
-            player.sendMessage("§a✓ You collected your item! +1 point");
-            // Assign new target
-            Material newTarget = getRandomMaterialForPlayer(player.getUniqueId());
-            playerTargets.put(player.getUniqueId(), newTarget);
-            player.sendMessage("§f§lNew target: §b" + plugin.formatMaterialName(newTarget));
-            
-            // Update display immediately
-            updatePlayerDisplay(player);
         }
     }
     
@@ -497,7 +509,8 @@ public class GameManager {
     private void startDisplaySystem() {
         // Create individual invisible boss bars for each player
         playerBossBars.clear();
-        for (Player player : Bukkit.getOnlinePlayers()) {
+        // Use cached player list for better performance during initialization
+        for (Player player : getOnlinePlayersCached()) {
             BossBar bossBar = Bukkit.createBossBar("", BarColor.WHITE, BarStyle.SOLID);
             bossBar.setProgress(0.0); // This makes the actual bar invisible
             bossBar.addPlayer(player);
@@ -514,7 +527,8 @@ public class GameManager {
                 }
                 
                 // Update boss bar for each player (no timer or game ending logic here)
-                for (Player player : Bukkit.getOnlinePlayers()) {
+                // Use cached player list for better performance
+                for (Player player : getOnlinePlayersCached()) {
                     if (gameRunning) {
                         // Update boss bar with player-specific info only
                         updatePlayerDisplay(player);

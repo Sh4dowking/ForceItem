@@ -403,9 +403,13 @@ public class Main extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPlayerPickup(PlayerAttemptPickupItemEvent event) {
+        // Only handle if game is running and it's a target item
         if (!gameManager.isGameRunning()) return;
+        
         Player player = event.getPlayer();
         Material target = gameManager.getPlayerTarget(player.getUniqueId());
+        
+        // Immediate processing for better user experience
         if (target != null && event.getItem().getItemStack().getType() == target) {
             gameManager.handleTargetItemPickup(player, target);
         }
