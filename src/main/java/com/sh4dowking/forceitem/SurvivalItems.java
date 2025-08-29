@@ -76,7 +76,7 @@ public class SurvivalItems {
         Material.BAMBOO_SLAB, Material.BAMBOO_FENCE, Material.BAMBOO_FENCE_GATE, Material.BAMBOO_DOOR,
         Material.BAMBOO_TRAPDOOR, Material.BAMBOO_PRESSURE_PLATE, Material.BAMBOO_BUTTON, Material.BAMBOO_SIGN,
         Material.BAMBOO_HANGING_SIGN, Material.BAMBOO_RAFT, Material.BAMBOO_CHEST_RAFT,
-        
+                
         // Warped and Crimson wood types (from Nether)
         Material.WARPED_STEM, Material.WARPED_HYPHAE, Material.STRIPPED_WARPED_STEM, Material.STRIPPED_WARPED_HYPHAE,
         Material.WARPED_PLANKS, Material.WARPED_STAIRS, Material.WARPED_SLAB, Material.WARPED_FENCE, Material.WARPED_FENCE_GATE,
