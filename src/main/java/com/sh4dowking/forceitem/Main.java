@@ -16,6 +16,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.PlayerAttemptPickupItemEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -26,6 +27,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BundleMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import com.sh4dowking.forceitem.modifiers.ModifierManager;
 
 /**
  * ForceItem - A competitive Minecraft minigame plugin
@@ -59,8 +62,10 @@ public class Main extends JavaPlugin implements Listener {
     
     // Core game components
     private GameManager gameManager;
+    private ModifierManager modifierManager;
     private LeaderboardGUI leaderboardGUI;
     private ItemInfoGUI itemInfoGUI;
+    private StartGameGUI startGameGUI;
     
     // Player data tracking - only backpacks remain here for UI handling
     private final Map<UUID, Inventory> playerBackpacks = new HashMap<>();
@@ -74,12 +79,18 @@ public class Main extends JavaPlugin implements Listener {
         // Initialize game manager
         gameManager = new GameManager(this);
         
+        // Initialize modifier manager
+        modifierManager = new ModifierManager(this);
+        
         // Register main plugin events
         getServer().getPluginManager().registerEvents(this, this);
         
         // Initialize and register GUI components
         itemInfoGUI = new ItemInfoGUI();
         getServer().getPluginManager().registerEvents(itemInfoGUI, this);
+        
+        startGameGUI = new StartGameGUI(this);
+        getServer().getPluginManager().registerEvents(startGameGUI, this);
         
         // Initialize and register command handler
         CommandHandler commandHandler = new CommandHandler(this);
@@ -128,6 +139,10 @@ public class Main extends JavaPlugin implements Listener {
         return leaderboardGUI;
     }
     
+    public StartGameGUI getStartGameGUI() {
+        return startGameGUI;
+    }
+    
     // ===============================
     // PUBLIC METHODS FOR GAMEMANAGER
     // ===============================
@@ -174,12 +189,20 @@ public class Main extends JavaPlugin implements Listener {
     }
     
     public void createPlayerBackpack(UUID playerId, String playerName) {
-        Inventory backpackInv = Bukkit.createInventory(null, 27, playerName + "'s Backpack");
+        Inventory backpackInv = Bukkit.createInventory(null, 27, ChatColor.WHITE + playerName + "'s Backpack");
         playerBackpacks.put(playerId, backpackInv);
     }
     
     public ItemInfoGUI getItemInfoGUI() {
         return itemInfoGUI;
+    }
+    
+    public GameManager getGameManager() {
+        return gameManager;
+    }
+    
+    public ModifierManager getModifierManager() {
+        return modifierManager;
     }
     
     public String formatMaterialName(Material material) {
@@ -230,6 +253,10 @@ public class Main extends JavaPlugin implements Listener {
     
     public void startGame(int seconds, int jokersPerPlayer) {
         gameManager.startGame(seconds, jokersPerPlayer);
+    }
+    
+    public void startGame(int seconds, int jokersPerPlayer, String modifierName) {
+        gameManager.startGame(seconds, jokersPerPlayer, modifierName);
     }
     
     public void stopGame() {
@@ -297,7 +324,7 @@ public class Main extends JavaPlugin implements Listener {
         
         if (backpack == null) {
             // Create new backpack inventory (27 slots = 3 rows)
-            backpack = Bukkit.createInventory(null, 27, ChatColor.AQUA + player.getName() + "'s Backpack");
+            backpack = Bukkit.createInventory(null, 27, ChatColor.WHITE + player.getName() + "'s Backpack");
             playerBackpacks.put(playerId, backpack);
         }
         
@@ -378,6 +405,18 @@ public class Main extends JavaPlugin implements Listener {
         
         String inventoryTitle = event.getView().getTitle();
         
+        // Handle Double Trouble targets GUI
+        if (inventoryTitle.contains("Double Trouble Targets")) {
+            event.setCancelled(true); // Prevent all interactions
+            return;
+        }
+        
+        // Handle standard target GUI (check for color-formatted title)
+        if (inventoryTitle.contains("Current Target")) {
+            event.setCancelled(true); // Prevent all interactions
+            return;
+        }
+        
         // Handle backpack inventory interactions
         if (inventoryTitle.contains("Backpack")) {
             // Prevent placing backpack items inside backpack (infinite recursion)
@@ -402,6 +441,23 @@ public class Main extends JavaPlugin implements Listener {
     }
 
     @EventHandler
+    public void onInventoryDrag(InventoryDragEvent event) {
+        if (!(event.getWhoClicked() instanceof Player)) return;
+        
+        String inventoryTitle = event.getView().getTitle();
+        
+        // Handle Double Trouble targets GUI
+        if (inventoryTitle.contains("Double Trouble Targets")) {
+            event.setCancelled(true); // Prevent all dragging
+        }
+        
+        // Handle standard target GUI
+        if (inventoryTitle.contains("Current Target")) {
+            event.setCancelled(true); // Prevent all dragging
+        }
+    }
+
+    @EventHandler
     public void onPlayerPickup(PlayerAttemptPickupItemEvent event) {
         // Only handle if game is running and it's a target item
         if (!gameManager.isGameRunning()) return;
@@ -422,18 +478,11 @@ public class Main extends JavaPlugin implements Listener {
         
         // If a game is running, set up this player to participate
         if (gameManager.isGameRunning()) {
+            // GameManager handles all initialization including jokers, backpack items, etc.
             gameManager.initializeNewPlayer(player);
             
-            // Give them a backpack
-            ItemStack backpack = createBackpackItem();
-            giveItemOrDrop(player, backpack);
-
-            // Give them a joker
-            ItemStack joker = createJokerItem();
-            giveItemOrDrop(player, joker);
-
-            // Create their personal backpack inventory
-            Inventory backpackInv = Bukkit.createInventory(null, 27, player.getName() + "'s Backpack");
+            // Create their personal backpack inventory for UI handling
+            Inventory backpackInv = Bukkit.createInventory(null, 27, ChatColor.WHITE + player.getName() + "'s Backpack");
             playerBackpacks.put(playerId, backpackInv);
         }
     }

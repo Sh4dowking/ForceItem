@@ -154,6 +154,9 @@ public class LeaderboardGUI implements Listener {
                 if (event.wasJokered()) {
                     lore.add(ChatColor.RED + "Obtained using: " + ChatColor.GOLD + "Joker");
                 }
+                if (event.hasMissedItem()) {
+                    lore.add(ChatColor.DARK_PURPLE + "Alternative target: " + ChatColor.LIGHT_PURPLE + formatMaterialName(event.getMissedItem()));
+                }
                 meta.setLore(lore);
                 item.setItemMeta(meta);
             }

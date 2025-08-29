@@ -1,50 +1,81 @@
-# ForceItem - Competitive Minecraft Minigame Plugin
+# ForceItem - Advanced Competitive Minecraft Minigame Plugin
 
-A fast-paced, competitive minigame for Minecraft servers where players race to collect randomly assigned target items within a time limit.
+A feature-rich, competitive minigame for Minecraft servers where players race to collect randomly assigned target items within a time limit. Now featuring a complete GUI system, configurable game modes, and a powerful modifier architecture!
 
 ## 🎮 Game Overview
 
-ForceItem challenges players to quickly gather specific items from the survival world. Each player receives a unique target item and must collect it before time runs out. The twist? Players can use "jokers" to skip difficult targets, but strategic use is key to victory!
+ForceItem challenges players to quickly gather specific items from the survival world. Each player receives unique target items and must collect them before time runs out. With the new GUI system, players can customize game settings, choose modifiers, and enjoy enhanced gameplay experiences!
 
-### 🆕 Latest Updates (v1.1)
-- **Personal Backpack System**: Each player gets a 27-slot personal storage accessible during games
-- **Enhanced Joker Rewards**: Using jokers now gives you the skipped item as a physical reward
-- **Admin Skip Command**: Administrators can skip any player's target with `/skip <player>`
-- **Smart Target Assignment**: No duplicate targets per player in a single game
-- **Immersive Game Start**: Professional 3-2-1 countdown with sound effects
-- **Mid-Game Join Support**: Players can join ongoing games seamlessly
-- **Individual Boss Bars**: Personal display system for each player
-- **Collection History**: Detailed tracking of when and how items were collected
+### 🆕 Major Updates (v2.0)
+- **🖱️ Complete GUI System**: Professional 54-slot interface for game configuration
+- **⚙️ Game Customization**: Configurable time (1min-24hr) and joker settings (0-64)
+- **🔥 Modifier System**: Scalable architecture for custom game modes
+- **⚡ Double Trouble Modifier**: Dual-target gameplay with strategic choices
+- **📊 Enhanced Leaderboards**: Collection tracking with missed item information
+- **🎨 Beautiful UI**: Custom item displays with colored names and descriptive lore
+- **🛠️ Admin Tools**: Enhanced /skip and /givejoker commands work in all modes
+- **🔊 Audio Feedback**: Consistent sound effects across all interfaces
+
+### 🎯 Game Modes
+
+#### 🎲 Standard Mode
+- Single target item per player
+- +1 point per collected item
+- Jokers give random item and +1 point
+
+#### ⚡ Double Trouble Mode
+- **Two simultaneous targets** per player
+- Collect **either target** for +1 point
+- New dual targets assigned after each collection
+- Jokers give **one random** item from current targets
+- Custom boss bar showing both targets
+- Special leaderboard showing alternative targets
 
 ## ✨ Features
 
-### Core Gameplay
-- **Timed Competition**: Customizable game duration (seconds)
-- **Random Targets**: Each player gets different, non-repeating items to collect
-- **Joker System**: Skip difficult targets and receive the item as reward (+1 point)
-- **Personal Storage**: 27-slot backpack system for item management during games
-- **Real-time Scoring**: Points awarded for successful collections
-- **Smart Assignment**: Anti-duplicate system prevents repeated targets per game
+### 🖱️ GUI System
+- **StartGame Interface**: 54-slot double chest configuration
+- **Time Settings**: 1 minute to 24 hours with increment/decrement controls
+- **Joker Configuration**: 0-64 jokers with visual feedback
+- **Modifier Selection**: Choose between Standard and Double Trouble modes
+- **Visual Feedback**: Item highlighting, button states, and sound effects
+- **Custom Item GUIs**: Beautiful displays for both standard and modifier targets
 
-### User Interface
-- **Individual Boss Bars**: Personal display shows current target and score
-- **Action Bar Timer**: Live countdown visible to all players
-- **Interactive Leaderboard**: Post-game results with collection timestamps and methods
-- **Item Information GUI**: Quick target item reference
-- **Backpack System**: Right-click bundle item to access personal 27-slot storage
+### 🎮 Core Gameplay
+- **Timed Competition**: Highly configurable game duration
+- **Smart Target System**: Anti-duplicate assignments with modifier support
+- **Enhanced Joker System**: Strategic item skipping with proper rewards
+- **Personal Storage**: 27-slot backpack system during games
+- **Real-time Display**: Individual boss bars with mode-specific information
+- **Collection Tracking**: Comprehensive history with timestamps and methods
 
-### Visual & Audio
-- **Themed Color Scheme**: Clean white/aqua/gold design with enhanced contrast
-- **Sound Effects**: Audio feedback for all actions including countdown
-- **Professional Styling**: Polished user experience with 3-2-1 game start
-- **Collection Feedback**: Visual indicators for normal vs joker collections
+### 🔥 Modifier Architecture
+- **Scalable Framework**: Easy addition of new game modes
+- **GameModifier Base**: Abstract class for consistent modifier behavior
+- **ModifierManager**: Centralized lifecycle and event management
+- **DoubleTroubleModifier**: First concrete implementation with dual targets
+- **Admin Support**: All commands work seamlessly with modifiers
+
+### 🎨 User Experience
+- **Themed Design**: Consistent white/aqua/gold color scheme
+- **Sound Integration**: Audio feedback for all interactions
+- **Inventory Protection**: Prevents item extraction from custom GUIs
+- **Error Handling**: Comprehensive validation and user feedback
+- **Accessibility**: Clear visual cues and intuitive navigation
+
+### 📊 Advanced Leaderboard
+- **Collection History**: Complete timeline of player achievements
+- **Method Tracking**: Normal collection vs joker usage indicators
+- **Double Trouble Insights**: Shows alternative targets that weren't collected
+- **Pagination**: Browse through all collected items
+- **Player Navigation**: Quick switching between player results
 
 ## 🚀 Installation
 
 1. Download the latest `ForceItem.jar` from releases
 2. Place in your server's `plugins/` directory
 3. Start/restart your server
-4. Plugin is ready to use!
+4. Use `/startgame` to open the configuration GUI!
 
 **Requirements:**
 - Minecraft Server 1.18+ (Paper/Spigot)
@@ -54,112 +85,137 @@ ForceItem challenges players to quickly gather specific items from the survival 
 
 | Command | Permission | Description |
 |---------|------------|-------------|
-| `/startgame <seconds> <jokers>` | `forceitem.admin` | Start a new game |
+| `/startgame` | `forceitem.admin` | Open game configuration GUI |
 | `/stopgame` | `forceitem.admin` | End current game |
-| `/skip <playername>` | `forceitem.admin` | Skip a player's current target (admin only) |
+| `/skip <playername>` | `forceitem.admin` | Skip player's targets (works in all modes) |
+| `/givejoker <player> <amount>` | `forceitem.admin` | Give jokers to player (works in all modes) |
 | `/leaderboard` | `forceitem.use` | View game results |
-| `/item` | `forceitem.use` | Show target item info |
+| `/item` | `forceitem.use` | Show current target(s) in custom GUI |
 
 ### Command Examples
-```
-/startgame 1800 3    # 30-minute game, 3 jokers per player
-/startgame 900 0    # 15-minute game, no jokers
-/skip PlayerName    # Admin skips PlayerName's current target
-/stopgame           # Emergency stop
+```bash
+/startgame              # Open GUI to configure and start game
+/skip PlayerName        # Skip PlayerName's current targets
+/givejoker Player 5     # Give 5 jokers to Player
+/stopgame              # Emergency stop
 ```
 
 ## 🎯 How to Play
 
-1. **Game Preparation**: Admin runs `/startgame <time> <jokers>` - world resets to day, players get full health
-2. **Countdown**: Professional 3-2-1 countdown with sound effects builds anticipation
-3. **Get Target**: Each player receives a unique random survival item to collect (no duplicates per game)
-4. **Collect Items**: Find and pick up your target item from the world
-5. **Use Storage**: Right-click your backpack (bundle item) to access 27-slot personal storage
-6. **Use Jokers**: Right-click joker items to skip difficult targets (+1 point + receive the skipped item)
-7. **Race Against Time**: Action bar shows remaining time for all players
-8. **View Results**: Leaderboard GUI opens automatically showing detailed collection history
-9. **Mid-Game Joins**: New players can join ongoing games and participate immediately
+### 🎲 Standard Mode
+1. **Configure**: Use `/startgame` GUI to set time, jokers, and select Standard mode
+2. **Countdown**: Professional 3-2-1 countdown builds anticipation
+3. **Collect**: Find your single target item (+1 point)
+4. **Use Jokers**: Skip difficult targets and receive the item (+1 point)
+5. **View Info**: Use `/item` for beautiful target display with lore
 
-### Scoring System
-- **+2 points** for collecting your target item
-- **+1 point** for using a joker to skip (plus you receive the skipped item as reward)
-- **New target** assigned after each collection/skip (guaranteed different from previous targets)
+### ⚡ Double Trouble Mode
+1. **Select**: Choose "Double Trouble" modifier in the `/startgame` GUI
+2. **Dual Targets**: Receive TWO target items simultaneously
+3. **Strategic Choice**: Collect **either target** for +1 point
+4. **New Targets**: Get fresh dual targets after each collection
+5. **Smart Jokers**: Get ONE random item from your two targets
+6. **Enhanced Display**: Boss bar shows both targets, `/item` shows both with lore
 
-### Special Items
-- **Jokers** (Red Barrier): Right-click to skip current target
-- **Backpack** (Bundle): Right-click to open 27-slot personal storage
-- Both items cannot be dropped and are automatically provided
+### 📊 Leaderboard Features
+- **Timeline View**: See exactly when each item was collected
+- **Method Indicators**: ⚡ symbol for joker-obtained items
+- **Double Trouble Insights**: "Alternative target" shows the item you didn't collect
+- **Player Navigation**: Click player heads to view detailed collections
 
-## 🔧 Configuration
+## ⚙️ Configuration
 
-The plugin works out-of-the-box with sensible defaults. All items are sourced from a carefully curated survival-obtainable whitelist including:
+### 🎮 Game Settings (via GUI)
+- **Time Range**: 1 minute to 24 hours (increment/decrement buttons)
+- **Joker Range**: 0 to 64 jokers per player
+- **Modifier Selection**: Visual selection with item highlighting
+- **Quick Presets**: Commonly used configurations available
 
-- Basic blocks (stone, dirt, ores)
-- Wood types and variants  
-- Tools and weapons (including chainmail armor)
-- Food items and farming materials
-- Decorative blocks
-- Redstone components
-- Nether materials
-
-*Creative-only and unobtainable items are excluded for fair gameplay. Problem items like grass blocks and tridents have been removed to ensure all targets are reasonably obtainable.*
-
-### Game Rules & World Setup
-- World time automatically resets to day (0 ticks) at game start
-- Keep Inventory enabled during games to prevent item loss on death
-- Immediate respawn enabled for seamless gameplay
-- Player health, hunger, and status effects reset at game start
+### 🔧 Game Rules
+- **Balanced Scoring**: +1 point for all collection methods
+- **World Reset**: Time set to day, player stats normalized
+- **Keep Inventory**: Enabled during games for seamless play
+- **Item Whitelist**: Curated survival-obtainable items only
 
 ## 🛠️ Developer Information
 
-### Project Structure
+### 📁 Project Structure
 ```
 src/main/java/com/sh4dowking/forceitem/
-├── Main.java              # Core plugin logic and commands
-├── CountdownTimer.java    # Game timer with action bar display
-├── LeaderboardGUI.java    # Interactive results interface
-├── ItemInfoGUI.java       # Target item display
-├── SurvivalItems.java     # Item whitelist management
-└── PlayerResult.java      # Result data structure
+├── Main.java                    # Core plugin and event handling
+├── GameManager.java            # Game logic and state management
+├── CommandHandler.java         # Command processing with GUI integration
+├── StartGameGUI.java           # Complete game configuration interface
+├── LeaderboardGUI.java         # Enhanced results display
+├── ItemInfoGUI.java           # Legacy item information
+├── CountdownTimer.java         # Timer with action bar display
+├── CollectionEvent.java        # Event tracking with missed item support
+├── SurvivalItems.java          # Item whitelist management
+└── modifiers/
+    ├── GameModifier.java       # Abstract modifier base class
+    ├── ModifierManager.java    # Lifecycle and event management
+    └── DoubleTroubleModifier.java # Dual-target implementation
 ```
 
-### Key Features
-- **Event-driven architecture** with proper cleanup and resource management
-- **Individual player systems** for boss bars, backpacks, and target tracking
-- **Thread-safe operations** for multiplayer stability with concurrent access
-- **Memory efficient** with automatic resource management and cleanup on disconnect
-- **Anti-duplicate target system** prevents repeated assignments within games
-- **Smart inventory management** with overflow protection and item distribution
-- **Extensible design** for easy customization and future enhancements
-- **Comprehensive collection tracking** with timestamps and method recording
+### 🔑 Key Features
+- **Event-driven Architecture**: Clean separation of concerns
+- **Modifier Framework**: Extensible system for custom game modes
+- **GUI System**: Complete interface with inventory protection
+- **Thread-safe Operations**: Stable multiplayer performance
+- **Memory Efficient**: Automatic cleanup and resource management
+- **Admin Tools**: Commands work seamlessly across all modes
+- **Collection Tracking**: Comprehensive history with metadata
+- **Sound Integration**: Consistent audio feedback
 
-### Building from Source
+### 🔨 Building from Source
 ```bash
 git clone https://github.com/Sh4dowking/ForceItem.git
 cd ForceItem
 mvn clean package
 ```
 
-## 🎨 Screenshots
+## 📸 Screenshots
 
-*Coming soon - showcase the beautiful GUI interfaces and gameplay*
+*Coming soon - showcase the new GUI system and Double Trouble gameplay*
+
+## 🔄 Roadmap
+
+### 🎯 Upcoming Modifiers
+- **Team Mode**: Collaborative target collection
+- **Speed Run**: Progressively faster target assignments
+- **Challenge Mode**: Difficult-only items with bonus points
+- **Multiplier Mode**: Combo system with increasing rewards
+
+### 🛠️ Technical Improvements
+- **Configuration File**: Persistent game settings
+- **Database Support**: Long-term statistics tracking
+- **API Expansion**: Developer hooks for custom modifiers
+- **Performance Optimization**: Large server support
 
 ## 📈 Compatibility
 
-- **Minecraft Versions**: 1.18, 1.19, 1.20, 1.21
+- **Minecraft Versions**: 1.18, 1.19, 1.20, 1.21+
 - **Server Software**: Paper (recommended), Spigot, Purpur
 - **Java Versions**: 17, 18, 19, 20, 21
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit pull requests, report bugs, or suggest features.
+Contributions are welcome! The modifier system makes it easy to add new game modes.
 
-### Development Setup
+### 🔧 Development Setup
 1. Fork this repository
-2. Set up your development environment with Java 17+ and Maven
-3. Make your changes
-4. Test thoroughly
+2. Set up Java 17+ and Maven environment
+3. Check out the `GameModifier` abstract class for creating new modifiers
+4. Test thoroughly with the GUI system
 5. Submit a pull request
+
+### 📝 Creating Custom Modifiers
+```java
+public class CustomModifier extends GameModifier {
+    // Implement abstract methods for your game mode
+    // See DoubleTroubleModifier for reference
+}
+```
 
 ## 📄 License
 
@@ -168,3 +224,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 **Made with ❤️ for the Minecraft community by Sh4dowking**
+
+*ForceItem v2.0 - Now with complete GUI system and modifier architecture!*

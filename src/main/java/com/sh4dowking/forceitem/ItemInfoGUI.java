@@ -38,7 +38,7 @@ public class ItemInfoGUI implements Listener {
      */
     public void openItemInfo(Player player, Material material) {
         String itemName = formatMaterialName(material);
-        Inventory gui = Bukkit.createInventory(null, 27, ChatColor.WHITE + "" + ChatColor.BOLD + "Target: " + ChatColor.AQUA + itemName);
+        Inventory gui = Bukkit.createInventory(null, 27, ChatColor.WHITE + "" + ChatColor.BOLD + "Target Item");
         
         // Create simple centered display
         createSimpleGUI(gui, material);

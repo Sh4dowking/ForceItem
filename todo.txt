@@ -1,5 +1,10 @@
-- alli s gliche item
-- settings for game start
+- same item gamemode
 - Velocity + world reset
 - smaller biomes setting
 - consistent clean colors everywhere
+- tune down sounds, consistent sounds
+- make sure that only 1 player can have the start game gui open at a time
+- add sounds to startgame gui
+- make sure that back button in stargame gui actually discards changes and only confirm saves th
+- give all recipes
+- food perk

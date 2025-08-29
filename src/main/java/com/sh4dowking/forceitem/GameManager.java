@@ -1,6 +1,7 @@
 package com.sh4dowking.forceitem;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -111,8 +112,45 @@ public class GameManager {
         return playerPoints.getOrDefault(playerId, 0);
     }
     
+    public void setPlayerPoints(UUID playerId, int points) {
+        playerPoints.put(playerId, points);
+    }
+    
     public Map<UUID, Integer> getAllPlayerPoints() {
         return new HashMap<>(playerPoints);
+    }
+    
+    /**
+     * Record a collection event for a player (used by modifiers)
+     * 
+     * @param playerId The UUID of the player
+     * @param material The material that was collected
+     * @param wasJokerUsed Whether this was from a joker use
+     */
+    public void recordCollection(UUID playerId, Material material, boolean wasJokerUsed) {
+        // Add to collected items
+        playerCollectedItems.computeIfAbsent(playerId, k -> new ArrayList<>()).add(material);
+        
+        // Record collection event with timestamp
+        playerCollectionHistory.computeIfAbsent(playerId, k -> new ArrayList<>())
+                              .add(new CollectionEvent(material, System.currentTimeMillis(), wasJokerUsed));
+    }
+    
+    /**
+     * Record a collection event for a player with missed item info (used by Double Trouble modifier)
+     * 
+     * @param playerId The UUID of the player
+     * @param material The material that was collected
+     * @param wasJokerUsed Whether this was from a joker use
+     * @param missedItem The item that was NOT collected in Double Trouble mode
+     */
+    public void recordCollection(UUID playerId, Material material, boolean wasJokerUsed, Material missedItem) {
+        // Add to collected items
+        playerCollectedItems.computeIfAbsent(playerId, k -> new ArrayList<>()).add(material);
+        
+        // Record collection event with timestamp and missed item info
+        playerCollectionHistory.computeIfAbsent(playerId, k -> new ArrayList<>())
+                              .add(new CollectionEvent(material, System.currentTimeMillis(), wasJokerUsed, missedItem));
     }
     
     public Map<UUID, List<Material>> getAllPlayerCollectedItems() {
@@ -132,8 +170,19 @@ public class GameManager {
     // ===============================
     
     public void startGame(int seconds, int jokersPerPlayer) {
+        startGame(seconds, jokersPerPlayer, "None");
+    }
+    
+    public void startGame(int seconds, int jokersPerPlayer, String modifierName) {
         gameRunning = true;
         currentJokersPerPlayer = jokersPerPlayer;
+        
+        // Set the modifier for this game
+        if (modifierName != null && !modifierName.equals("None")) {
+            plugin.getModifierManager().setActiveModifier(modifierName);
+        } else {
+            plugin.getModifierManager().setActiveModifier(null);
+        }
         
         // Clear any existing leaderboard from previous games
         plugin.clearLeaderboard();
@@ -154,8 +203,8 @@ public class GameManager {
         preparePlayersAndWorld();
         
         // Announce game preparation to all players
-        Bukkit.broadcastMessage("§f§lForceItem §7game starting!");
-        Bukkit.broadcastMessage("§f§lTime: §b" + seconds + "s §7| §f§lJokers: §b" + jokersPerPlayer);
+        //Bukkit.broadcastMessage("§f§lForceItem §7game starting!");
+        //Bukkit.broadcastMessage("§f§lTime: §b" + seconds + "s §7| §f§lJokers: §b" + jokersPerPlayer);
         // Start countdown with title display
         startCountdownAndGame(seconds, jokersPerPlayer);
     }
@@ -174,7 +223,7 @@ public class GameManager {
         plugin.createLeaderboard(playerCollectedItems, playerPoints, playerCollectionHistory, gameStartTime);
         
         // Announce game end
-        Bukkit.broadcastMessage("§f§lForceItem §7game ended!");
+        Bukkit.broadcastMessage("§c§lForceItem game ended!");
         
         // Schedule leaderboard display after brief delay
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
@@ -189,7 +238,7 @@ public class GameManager {
         for (Player player : Bukkit.getOnlinePlayers()) {
             int points = playerPoints.getOrDefault(player.getUniqueId(), 0);
             player.sendMessage("§f§lYour final score: §a" + points + " points");
-            player.sendMessage("§7Leaderboard GUI will open shortly! Use §f/leaderboard §7to view it again.");
+            player.sendMessage("§fLeaderboard GUI will open shortly! Use §5/leaderboard §fto view it again.");
         }
     }
     
@@ -281,30 +330,42 @@ public class GameManager {
      * This method contains the original game start logic
      */
     private void actuallyStartGame(int seconds, int jokersPerPlayer) {
-        // Assign targets and items to all players
+        // Initialize all players and collect them in a list for modifier system
+        List<Player> allPlayers = new ArrayList<>();
+        
+        // Initialize player data and items (but don't assign targets yet)
         for (Player player : Bukkit.getOnlinePlayers()) {
-            Material randomItem = getRandomMaterialForPlayer(player.getUniqueId());
-            playerTargets.put(player.getUniqueId(), randomItem);
+            allPlayers.add(player);
+            
             playerPoints.put(player.getUniqueId(), 0);
             playerJokers.put(player.getUniqueId(), jokersPerPlayer);
             playerCollectedItems.put(player.getUniqueId(), new ArrayList<>());
             playerCollectionHistory.put(player.getUniqueId(), new ArrayList<>());
             
-            // Send target message first
-            player.sendMessage("§f§lYour target item: §b" + plugin.formatMaterialName(randomItem));
-            
-            // Give player joker items and send joker message after
+            // Give player joker items and send joker message first
             if (jokersPerPlayer > 0) {
                 ItemStack joker = plugin.createJokerItem();
                 joker.setAmount(jokersPerPlayer);
                 plugin.giveItemOrDrop(player, joker);
-                player.sendMessage("§7You have been given §4§l" + jokersPerPlayer + " §4§lJokers§7! Right-click to skip your current target.");
+                player.sendMessage("§fYou have been given §4" + jokersPerPlayer + " Jokers§f! Right-click to skip your current target.");
             }
             
             // Give player backpack item
             ItemStack backpack = plugin.createBackpackItem();
             plugin.giveItemOrDrop(player, backpack);
-            player.sendMessage("§7You have been given a §6§lBackpack§7! Right-click to access your personal storage.");
+            player.sendMessage("§fYou have been given a §6Backpack§f! Right-click to access your personal storage.");
+        }
+        
+        // Initialize modifier system first (this will assign targets and send messages)
+        plugin.getModifierManager().onGameStart(allPlayers, jokersPerPlayer);
+        
+        // Only assign standard targets if no modifier is active
+        if (plugin.getModifierManager().getActiveModifier() == null) {
+            for (Player player : allPlayers) {
+                Material randomItem = getRandomMaterialForPlayer(player.getUniqueId());
+                playerTargets.put(player.getUniqueId(), randomItem);
+                player.sendMessage("§f§lYour target item: §b" + plugin.formatMaterialName(randomItem));
+            }
         }
         
         // Start the game timer and systems
@@ -330,6 +391,12 @@ public class GameManager {
     public void handleTargetItemPickup(Player player, Material target) {
         UUID playerId = player.getUniqueId();
         
+        // Check if a modifier wants to handle this collection
+        if (plugin.getModifierManager().onTargetCollected(player, target)) {
+            return; // Modifier handled it
+        }
+        
+        // Default behavior for normal mode
         // Update score
         int newScore = playerPoints.getOrDefault(playerId, 0) + 1;
         playerPoints.put(playerId, newScore);
@@ -363,10 +430,25 @@ public class GameManager {
     public void checkInventories() {
         // Use cached player list for better performance during frequent checks
         for (Player player : getOnlinePlayersCached()) {
-            Material target = playerTargets.get(player.getUniqueId());
-            if (target != null && player.getInventory().contains(target)) {
-                // Use consolidated method for consistent behavior
-                handleTargetItemPickup(player, target);
+            UUID playerId = player.getUniqueId();
+            
+            // Get target(s) from modifier system or default
+            List<Material> targets = plugin.getModifierManager().getPlayerTargets(playerId);
+            if (targets.isEmpty()) {
+                // Fallback to default single target system
+                Material target = playerTargets.get(playerId);
+                if (target != null) {
+                    targets = Arrays.asList(target);
+                }
+            }
+            
+            // Check if player has any of their target items
+            for (Material target : targets) {
+                if (player.getInventory().contains(target)) {
+                    // Use consolidated method for consistent behavior
+                    handleTargetItemPickup(player, target);
+                    break; // Only handle one item per check cycle
+                }
             }
         }
     }
@@ -381,6 +463,18 @@ public class GameManager {
     public boolean useJoker(Player player, ItemStack jokerItem) {
         if (!gameRunning) return false;
         
+        // Check if a modifier wants to handle this joker use
+        if (plugin.getModifierManager().onJokerUsed(player)) {
+            // Remove one joker from inventory
+            if (jokerItem != null && jokerItem.getAmount() > 1) {
+                jokerItem.setAmount(jokerItem.getAmount() - 1);
+            } else if (jokerItem != null) {
+                player.getInventory().remove(jokerItem);
+            }
+            return true; // Modifier handled it
+        }
+        
+        // Default joker behavior
         int jokersLeft = playerJokers.getOrDefault(player.getUniqueId(), 0);
         
         if (jokersLeft > 0) {
@@ -540,20 +634,35 @@ public class GameManager {
     }
     
     public void updatePlayerDisplay(Player player) {
-        Material target = playerTargets.get(player.getUniqueId());
-        if (target != null) {
+        // Check if modifier wants to handle display completely
+        List<Material> modifierTargets = plugin.getModifierManager().getPlayerTargets(player.getUniqueId());
+        String displayText;
+        
+        if (plugin.getModifierManager().hasActiveModifier() && modifierTargets != null && !modifierTargets.isEmpty()) {
+            // Modifier has targets, let it handle the display
             int points = playerPoints.getOrDefault(player.getUniqueId(), 0);
-            
-            // Update boss bar title (text will show at top, but bar itself is invisible)
-            String targetName = plugin.formatMaterialName(target);
-            String displayText = "§f§lTarget: §b" + targetName + " §7| §f§lPoints: §a" + points;
-            
-            BossBar playerBossBar = playerBossBars.get(player.getUniqueId());
-            if (playerBossBar != null) {
-                playerBossBar.setTitle(displayText);
-                // Ensure the bar remains invisible
-                playerBossBar.setProgress(0.0);
+            displayText = "§f§lTarget: §bLoading... §7| §f§lPoints: §a" + points; // Temporary base text
+            displayText = plugin.getModifierManager().modifyDisplayText(player, displayText);
+        } else {
+            // Standard single target mode
+            Material target = playerTargets.get(player.getUniqueId());
+            if (target != null) {
+                int points = playerPoints.getOrDefault(player.getUniqueId(), 0);
+                String targetName = plugin.formatMaterialName(target);
+                displayText = "§f§lTarget: §b" + targetName + " §7| §f§lPoints: §a" + points;
+                
+                // Let modifiers modify the display text (for compatibility)
+                displayText = plugin.getModifierManager().modifyDisplayText(player, displayText);
+            } else {
+                return; // No targets to display
             }
+        }
+        
+        BossBar playerBossBar = playerBossBars.get(player.getUniqueId());
+        if (playerBossBar != null) {
+            playerBossBar.setTitle(displayText);
+            // Ensure the bar remains invisible
+            playerBossBar.setProgress(0.0);
         }
     }
     
