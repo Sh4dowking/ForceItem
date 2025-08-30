@@ -41,9 +41,13 @@ public class PerkManager {
         this.plugin = plugin;
         
         // Register built-in perks
-        registerPerk(new SaturationPerk(plugin));
         registerPerk(new ToolsPerk(plugin));
         registerPerk(new BackpackPerk(plugin));
+        registerPerk(new SaturationPerk(plugin));
+        registerPerk(new SpeedPerk(plugin));
+        registerPerk(new NightVisionPerk(plugin));
+        registerPerk(new FastSmeltingPerk(plugin));
+        registerPerk(new VeinMinerPerk(plugin));
     }
     
     /**

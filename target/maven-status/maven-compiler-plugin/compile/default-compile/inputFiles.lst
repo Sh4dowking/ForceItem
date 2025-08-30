@@ -1,6 +1,7 @@
 /home/ubuntu/MinecraftPlugins/ForceItem/src/main/java/com/sh4dowking/forceitem/perks/SaturationPerk.java
+/home/ubuntu/MinecraftPlugins/ForceItem/src/main/java/com/sh4dowking/forceitem/perks/FastSmeltingPerk.java
 /home/ubuntu/MinecraftPlugins/ForceItem/src/main/java/com/sh4dowking/forceitem/LeaderboardGUI.java
-/home/ubuntu/MinecraftPlugins/ForceItem/src/main/java/com/sh4dowking/forceitem/ForceItem.java
+/home/ubuntu/MinecraftPlugins/ForceItem/src/main/java/com/sh4dowking/forceitem/perks/VeinMinerPerk.java
 /home/ubuntu/MinecraftPlugins/ForceItem/src/main/java/com/sh4dowking/forceitem/modifiers/ModifierManager.java
 /home/ubuntu/MinecraftPlugins/ForceItem/src/main/java/com/sh4dowking/forceitem/modifiers/GameModifier.java
 /home/ubuntu/MinecraftPlugins/ForceItem/src/main/java/com/sh4dowking/forceitem/ItemInfoGUI.java
@@ -12,6 +13,9 @@
 /home/ubuntu/MinecraftPlugins/ForceItem/src/main/java/com/sh4dowking/forceitem/CommandHandler.java
 /home/ubuntu/MinecraftPlugins/ForceItem/src/main/java/com/sh4dowking/forceitem/Main.java
 /home/ubuntu/MinecraftPlugins/ForceItem/src/main/java/com/sh4dowking/forceitem/perks/PerkManager.java
+/home/ubuntu/MinecraftPlugins/ForceItem/src/main/java/com/sh4dowking/forceitem/perks/BackpackPerk.java
 /home/ubuntu/MinecraftPlugins/ForceItem/src/main/java/com/sh4dowking/forceitem/CollectionEvent.java
 /home/ubuntu/MinecraftPlugins/ForceItem/src/main/java/com/sh4dowking/forceitem/modifiers/DoubleTroubleModifier.java
+/home/ubuntu/MinecraftPlugins/ForceItem/src/main/java/com/sh4dowking/forceitem/perks/SpeedPerk.java
 /home/ubuntu/MinecraftPlugins/ForceItem/src/main/java/com/sh4dowking/forceitem/CountdownTimer.java
+/home/ubuntu/MinecraftPlugins/ForceItem/src/main/java/com/sh4dowking/forceitem/perks/NightVisionPerk.java

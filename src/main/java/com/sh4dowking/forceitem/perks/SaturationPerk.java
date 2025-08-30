@@ -51,7 +51,7 @@ public class SaturationPerk extends GamePerk {
     
     @Override
     public Material getDisplayMaterial() {
-        return Material.GOLDEN_APPLE;
+        return Material.COOKED_BEEF;
     }
     
     @Override
@@ -76,9 +76,21 @@ public class SaturationPerk extends GamePerk {
         // Store the game duration for proper effect timing
         this.gameDurationSeconds = gameDurationSeconds;
         
-        // Apply saturation effect to all players at game start
+        // Convert game duration to ticks (20 ticks = 1 second)
+        int durationTicks = gameDurationSeconds * 20;
+        
+        // Apply saturation effect to all players for the entire game duration (hidden from UI)
+        PotionEffect saturationEffect = new PotionEffect(
+            PotionEffectType.SATURATION,
+            durationTicks, // Game duration
+            SATURATION_AMPLIFIER,
+            AMBIENT,
+            false, // No particles
+            false  // Hidden from UI
+        );
+        
         for (Player player : players) {
-            applySaturationEffect(player);
+            player.addPotionEffect(saturationEffect);
         }
         
         plugin.getLogger().info(String.format("[Perks] Applied Saturation effect to %d players for %d seconds", 
@@ -100,45 +112,16 @@ public class SaturationPerk extends GamePerk {
     @Override
     public void onPlayerJoin(Player player) {
         // Apply saturation effect to players who join mid-game
-        applySaturationEffect(player);
-    }
-    
-    @Override
-    public void onPeriodicUpdate(List<Player> players) {
-        // Refresh saturation effect every periodic update (every second)
-        // This ensures the effect doesn't wear off
-        for (Player player : players) {
-            if (!player.hasPotionEffect(PotionEffectType.SATURATION)) {
-                // Reapply if effect was somehow removed
-                applySaturationEffect(player);
-            } else {
-                // Check if effect duration is getting low and refresh if needed
-                PotionEffect currentEffect = player.getPotionEffect(PotionEffectType.SATURATION);
-                if (currentEffect != null && currentEffect.getDuration() < 100) { // Less than 5 seconds left
-                    applySaturationEffect(player);
-                }
-            }
-        }
-    }
-    
-    /**
-     * Apply the saturation potion effect to a player with infinite duration
-     * 
-     * @param player The player to apply the effect to
-     */
-    private void applySaturationEffect(Player player) {
-        // Use maximum possible duration for effectively infinite saturation
-        int infiniteDuration = Integer.MAX_VALUE; // Effectively infinite duration
-        
+        // Note: This gives them the effect for a default duration since we can't easily calculate remaining time
+        int defaultDuration = 300 * 20; // 5 minutes in ticks
         PotionEffect saturationEffect = new PotionEffect(
             PotionEffectType.SATURATION,
-            infiniteDuration, // Infinite duration
+            defaultDuration, // Default duration
             SATURATION_AMPLIFIER,
             AMBIENT,
-            PARTICLES,
-            ICON
+            false, // No particles
+            false  // Hidden from UI
         );
-        
-        player.addPotionEffect(saturationEffect, true); // Force override existing effect
+        player.addPotionEffect(saturationEffect);
     }
 }

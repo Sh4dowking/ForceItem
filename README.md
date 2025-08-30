@@ -6,7 +6,16 @@ A feature-rich, competitive minigame for Minecraft servers where players race to
 
 ForceItem challenges players to quickly gather specific items from the survival world. Each player receives unique target items and must collect them before time runs out. With the comprehensive GUI system, players can customize game settings, choose modifiers, enable perks, and enjoy enhanced gameplay experiences!
 
-### 🆕 Latest Updates (v2.2.0)
+### 🆕 Latest Updates (v2.3.0)
+- **⚡ Speed Perk**: Grants all players Speed II effect for enhanced movement throughout the game
+- **👁️ Night Vision Perk**: Provides Night Vision effect to all players for perfect visibility in darkness  
+- **🔥 Fast Smelting Perk**: 20x faster furnace smelting speed for all furnace types globally
+- **⛏️ Vein Miner Perk**: Automatically mines connected blocks of the same type, including diagonal connections
+- **🎯 Improved Balance**: All potion effect perks use timed duration matching game length (no infinite effects)
+- **🔇 Hidden Effects**: Potion effects from perks don't show in the UI for cleaner gameplay experience
+- **🚀 Performance**: Optimized vein mining with flood-fill algorithm and configurable limits (64 blocks max)
+
+### 🆕 Previous Updates (v2.2.0)
 - **🎒 Backpack Perk**: Personal 27-slot inventory for each player with custom GUI access
 - **🎵 Enhanced Audio**: UI button click sounds for all GUI navigation and interactions
 - **🔒 GUI Safety**: Only one player can open start game GUI at a time to prevent conflicts
@@ -14,7 +23,6 @@ ForceItem challenges players to quickly gather specific items from the survival 
 - **🛡️ Double Trouble Fixes**: Points properly preserved when players leave and rejoin games
 - **🚫 Anti-Exploitation**: Prevents item duplication abuse through sophisticated player tracking
 - **🔄 Smart Player Management**: Enhanced mid-game joining with original vs new player distinction
-- **📝 Debug Logging**: Comprehensive logging system for troubleshooting player rejoin issues
 
 ### 🆕 Previous Updates (v2.1)
 - **🎁 Perk System**: Stackable gameplay enhancements that work with any modifier
@@ -60,7 +68,7 @@ ForceItem challenges players to quickly gather specific items from the survival 
 
 #### Available Perks
 - **⭐ Saturation Perk**: 
-  - Infinite saturation effect for all players
+  - Permanent saturation effect for all players
   - No hunger loss throughout the game
   - Enhanced health regeneration capabilities
 - **⚒️ Tools Perk**: 
@@ -74,6 +82,24 @@ ForceItem challenges players to quickly gather specific items from the survival 
   - Beautiful custom GUI with player name
   - Items persist throughout the entire game
   - Perfect for storing extra resources and organization
+- **⚡ Speed Perk**:
+  - Speed II effect for all players
+  - Enhanced movement speed for faster gameplay
+  - Effect duration matches game length perfectly
+- **👁️ Night Vision Perk**:
+  - Night Vision effect for all players
+  - Perfect visibility in caves and darkness
+  - Great for underground resource gathering
+- **🔥 Fast Smelting Perk**:
+  - 20x faster smelting speed for all furnace types
+  - Works with furnaces, blast furnaces, and smokers
+  - Global effect that benefits all players
+- **⛏️ Vein Miner Perk**:
+  - Automatically mines connected blocks of the same type
+  - Works on all ore types and log types
+  - Detects diagonal connections for maximum efficiency
+  - Limited to 64 blocks per vein to prevent server lag
+  - Uses advanced flood-fill algorithm for performance
 
 ### 🖱️ GUI System
 - **StartGame Interface**: 54-slot double chest configuration with exclusive access control

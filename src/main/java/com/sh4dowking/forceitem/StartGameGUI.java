@@ -795,7 +795,8 @@ public class StartGameGUI implements Listener {
                         }
                         perkStringBuilder.setLength(perkStringBuilder.length() - 2);
                     }
-                    player.sendMessage("§f§lModifier: §b" + selectedModifier + " §7| §f§lPerks: §b" + perkStringBuilder.toString());
+                    player.sendMessage("§f§lModifier: §b" + selectedModifier);
+                    player.sendMessage("§f§lPerks: §b" + perkStringBuilder.toString());
                 }
                 break;
         }

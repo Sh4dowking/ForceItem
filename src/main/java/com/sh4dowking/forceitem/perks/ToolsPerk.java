@@ -45,7 +45,7 @@ public class ToolsPerk extends GamePerk {
     
     @Override
     public Material getDisplayMaterial() {
-        return Material.NETHERITE_PICKAXE;
+        return Material.NETHERITE_AXE;
     }
     
     @Override
