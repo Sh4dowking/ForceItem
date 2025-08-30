@@ -53,6 +53,12 @@ public class GameManager {
     private final Map<UUID, List<CollectionEvent>> playerCollectionHistory = new HashMap<>();
     private final Map<UUID, Set<Material>> playerAssignedTargets = new HashMap<>();
     
+    // Track players who have received items during current game session
+    private final Set<UUID> playersWithItems = new HashSet<>();
+    
+    // Track players who were present at the start of the current game
+    private final Set<UUID> originalGamePlayers = new HashSet<>();
+    
     // Display systems - performance optimized
     private final Map<UUID, BossBar> playerBossBars = new HashMap<>();
     private BukkitRunnable displayTask;
@@ -89,6 +95,16 @@ public class GameManager {
     
     public boolean isGameRunning() {
         return gameRunning;
+    }
+    
+    /**
+     * Check if a player was present at the start of the current game
+     * 
+     * @param playerId The UUID of the player to check
+     * @return true if the player was present at game start, false otherwise
+     */
+    public boolean wasPlayerAtGameStart(UUID playerId) {
+        return originalGamePlayers.contains(playerId);
     }
     
     public Material getPlayerTarget(UUID playerId) {
@@ -225,6 +241,11 @@ public class GameManager {
         // Clean up modifier and perk systems
         plugin.getPerkManager().onGameEnd();
         
+        // Clear the players with items set for the next game
+        playersWithItems.clear();
+        // Clear the original game players set for the next game
+        originalGamePlayers.clear();
+        
         // Initialize leaderboard GUI for result viewing
         plugin.createLeaderboard(playerCollectedItems, playerPoints, playerCollectionHistory, gameStartTime);
         
@@ -342,14 +363,20 @@ public class GameManager {
         // Initialize player data and items (but don't assign targets yet)
         for (Player player : Bukkit.getOnlinePlayers()) {
             allPlayers.add(player);
+            UUID playerId = player.getUniqueId();
             
             // Clear all existing potion effects to start fresh
             clearAllEffects(player);
             
-            playerPoints.put(player.getUniqueId(), 0);
-            playerJokers.put(player.getUniqueId(), jokersPerPlayer);
-            playerCollectedItems.put(player.getUniqueId(), new ArrayList<>());
-            playerCollectionHistory.put(player.getUniqueId(), new ArrayList<>());
+            playerPoints.put(playerId, 0);
+            playerJokers.put(playerId, jokersPerPlayer);
+            playerCollectedItems.put(playerId, new ArrayList<>());
+            playerCollectionHistory.put(playerId, new ArrayList<>());
+            
+            // Track that this player was present at game start
+            originalGamePlayers.add(playerId);
+            // Track that this player has received items for this game session
+            playersWithItems.add(playerId);
             
             // Give player joker items and send joker message first
             if (jokersPerPlayer > 0) {
@@ -358,11 +385,6 @@ public class GameManager {
                 plugin.giveItemOrDrop(player, joker);
                 player.sendMessage("§fYou have been given §4" + jokersPerPlayer + " Jokers§f! Right-click to skip your current target.");
             }
-            
-            // Give player backpack item
-            ItemStack backpack = plugin.createBackpackItem();
-            plugin.giveItemOrDrop(player, backpack);
-            player.sendMessage("§fYou have been given a §6Backpack§f! Right-click to access your personal storage.");
             
             // Grant all crafting recipes to the player
             grantAllRecipes(player);
@@ -573,8 +595,22 @@ public class GameManager {
             playerBossBars.put(playerId, bossBar);
         }
         
+        // Check if player already has game data (rejoining player)
+        boolean hasExistingData = playerTargets.containsKey(playerId);
+        boolean hasModifierData = !plugin.getModifierManager().getPlayerTargets(playerId).isEmpty();
+        boolean wasOriginalPlayer = originalGamePlayers.contains(playerId);
+        int currentPoints = playerPoints.getOrDefault(playerId, -1);
+        
+        // Player is rejoining if they have existing data OR if they were an original player with points/modifier data
+        boolean isRejoiningPlayer = hasExistingData || hasModifierData || (wasOriginalPlayer && currentPoints > 0);
+        
+        // Debug message to understand what's happening
+        plugin.getLogger().info("Player " + player.getName() + " rejoining: hasExistingData=" + hasExistingData + 
+                               ", hasModifierData=" + hasModifierData + ", wasOriginalPlayer=" + wasOriginalPlayer + 
+                               ", currentPoints=" + currentPoints + ", isRejoiningPlayer=" + isRejoiningPlayer);
+        
         // Initialize player data if they don't have any (new player joining mid-game)
-        if (!playerTargets.containsKey(playerId)) {
+        if (!isRejoiningPlayer) {
             // Clear any existing effects for fresh start
             clearAllEffects(player);
             
@@ -585,27 +621,30 @@ public class GameManager {
             playerCollectedItems.put(playerId, new ArrayList<>());
             playerCollectionHistory.put(playerId, new ArrayList<>());
             
-            // Give them a backpack
-            ItemStack backpack = plugin.createBackpackItem();
-            plugin.giveItemOrDrop(player, backpack);
-            
             // Grant all crafting recipes to the new player
             grantAllRecipes(player);
 
-            // Give them jokers
-            if (currentJokersPerPlayer > 0) {
-                ItemStack joker = plugin.createJokerItem();
-                joker.setAmount(currentJokersPerPlayer);
-                plugin.giveItemOrDrop(player, joker);
+            // Only give items to players who weren't present at game start (truly new players)
+            if (!originalGamePlayers.contains(playerId)) {
+                // Mark player as having received items for this game session
+                playersWithItems.add(playerId);
+                
+                // Give them jokers
+                if (currentJokersPerPlayer > 0) {
+                    ItemStack joker = plugin.createJokerItem();
+                    joker.setAmount(currentJokersPerPlayer);
+                    plugin.giveItemOrDrop(player, joker);
+                }
+                
+                // Welcome them to the ongoing game
+                player.sendMessage("§6§lWelcome to the ongoing Force Item game!");
+            } else {
+                // Player rejoining - just give them their current status without items
+                player.sendMessage("§e§lWelcome back to the Force Item game!");
             }
-
-            // Create their personal backpack inventory
-            plugin.createPlayerBackpack(playerId, player.getName());
-            
-            // Welcome them to the ongoing game
-            player.sendMessage("§6§lWelcome to the ongoing Force Item game!");
-            player.sendMessage("§f§lTarget: §b" + plugin.formatMaterialName(playerTargets.get(playerId)));
-            player.sendMessage("§f§lJokers remaining: §e" + playerJokers.get(playerId));
+        } else {
+            // Player has existing data - they're rejoining
+            player.sendMessage("§e§lWelcome back to the Force Item game!");
         }
         
         // Update their display immediately
@@ -808,7 +847,6 @@ public class GameManager {
             boolean success = Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
             
             if (success) {
-                player.sendMessage("§a§lAll Recipes Unlocked: §fAll Minecraft crafting recipes are now available!");
                 plugin.getLogger().info("[Recipes] Granted all recipes to player " + player.getName() + " via command");
             } else {
                 plugin.getLogger().warning("[Recipes] Failed to execute recipe command for player " + player.getName());

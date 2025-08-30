@@ -76,6 +76,7 @@ public class CommandHandler implements CommandExecutor {
         // If no arguments provided, open the GUI for players
         if (args.length == 0) {
             if (sender instanceof Player player) {
+                // Try to open the GUI - it will handle the safety check internally
                 plugin.getStartGameGUI().openStartGameGUI(player);
                 return true;
             } else {
@@ -172,7 +173,6 @@ public class CommandHandler implements CommandExecutor {
                     if (target != null) {
                         // Play item info sound
                         player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
-                        player.sendMessage("§7[DEBUG] Using showStandardTarget for: " + target);
                         showStandardTarget(player, target);
                     } else {
                         player.sendMessage("§cYou don't have a target item assigned!");

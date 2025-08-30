@@ -6,7 +6,17 @@ A feature-rich, competitive minigame for Minecraft servers where players race to
 
 ForceItem challenges players to quickly gather specific items from the survival world. Each player receives unique target items and must collect them before time runs out. With the comprehensive GUI system, players can customize game settings, choose modifiers, enable perks, and enjoy enhanced gameplay experiences!
 
-### 🆕 Major Updates (v2.1)
+### 🆕 Latest Updates (v2.2.0)
+- **🎒 Backpack Perk**: Personal 27-slot inventory for each player with custom GUI access
+- **🎵 Enhanced Audio**: UI button click sounds for all GUI navigation and interactions
+- **🔒 GUI Safety**: Only one player can open start game GUI at a time to prevent conflicts
+- **💾 Save/Discard System**: GUI changes can be saved with lime dye or discarded with red dye
+- **🛡️ Double Trouble Fixes**: Points properly preserved when players leave and rejoin games
+- **🚫 Anti-Exploitation**: Prevents item duplication abuse through sophisticated player tracking
+- **🔄 Smart Player Management**: Enhanced mid-game joining with original vs new player distinction
+- **📝 Debug Logging**: Comprehensive logging system for troubleshooting player rejoin issues
+
+### 🆕 Previous Updates (v2.1)
 - **🎁 Perk System**: Stackable gameplay enhancements that work with any modifier
 - **⭐ Saturation Perk**: Infinite saturation effect throughout the entire game
 - **⚒️ Tools Perk**: Unbreakable netherite tools with maximum efficiency enchantments
@@ -58,14 +68,23 @@ ForceItem challenges players to quickly gather specific items from the survival 
   - Unbreakable Netherite Pickaxe (Efficiency V)
   - Unbreakable Netherite Shovel (Efficiency V)
   - Perfect for resource gathering and combat
+- **🎒 Backpack Perk**:
+  - Personal 27-slot inventory for each player
+  - Access via right-clicking the backpack item
+  - Beautiful custom GUI with player name
+  - Items persist throughout the entire game
+  - Perfect for storing extra resources and organization
 
 ### 🖱️ GUI System
-- **StartGame Interface**: 54-slot double chest configuration
+- **StartGame Interface**: 54-slot double chest configuration with exclusive access control
+- **Safety Feature**: Only one player can open the configuration GUI at a time
+- **Save/Discard Controls**: Lime dye saves changes, red dye discards and reverts to backup
 - **Time Settings**: 1 minute to 24 hours with increment/decrement controls
 - **Joker Configuration**: 0-64 jokers with visual feedback
 - **Modifier Selection**: Choose between Standard and Double Trouble modes
-- **Perk Selection**: Toggle multiple perks with visual status indicators
-- **Visual Feedback**: Item highlighting, button states, and sound effects
+- **Perk Selection**: Toggle multiple perks including new Backpack perk
+- **Enhanced Audio**: UI button click sounds for all navigation buttons
+- **Visual Feedback**: Item highlighting, button states, and comprehensive sound effects
 - **Custom Item GUIs**: Beautiful displays for both standard and modifier targets
 
 ### 🎮 Core Gameplay
@@ -88,11 +107,14 @@ ForceItem challenges players to quickly gather specific items from the survival 
 - **Admin Support**: All commands work seamlessly with modifiers and perks
 
 ### 🎨 User Experience
-- **Themed Design**: Consistent white/aqua/gold color scheme
-- **Sound Integration**: Audio feedback for all interactions
-- **Inventory Protection**: Prevents item extraction from custom GUIs
+- **Themed Design**: Consistent white/aqua/gold color scheme throughout all interfaces
+- **Enhanced Audio**: UI button click sounds for GUI navigation and leaderboard interactions
+- **Sound Feedback**: Villager NO for cancellations, experience orb for confirmations
+- **Inventory Protection**: Prevents item extraction from all custom GUIs
+- **Exclusive Access**: Start game GUI safety prevents admin conflicts
+- **Smart Controls**: Save/discard system with visual feedback and sound cues
 - **Error Handling**: Comprehensive validation and user feedback
-- **Accessibility**: Clear visual cues and intuitive navigation
+- **Accessibility**: Clear visual cues and intuitive navigation with audio support
 
 ### 📊 Advanced Leaderboard
 - **Collection History**: Complete timeline of player achievements
@@ -153,9 +175,12 @@ ForceItem challenges players to quickly gather specific items from the survival 
 ### 🎁 Using Perks
 1. **Access Perks**: Click the diamond "Perks" button in `/startgame` GUI
 2. **Toggle Perks**: Click any perk to enable/disable (multiple perks allowed)
-3. **Visual Feedback**: Green checkmark shows active perks
-4. **Game Integration**: Perks automatically activate when game starts
-5. **Smart Duration**: Saturation perk lasts exactly as long as your game duration
+3. **Visual Feedback**: Green checkmark shows active perks, red dye to cancel
+4. **Save Changes**: Use lime dye to save perk selections, red dye to discard
+5. **Audio Feedback**: UI button clicks for all perk interactions
+6. **Game Integration**: Perks automatically activate when game starts
+7. **Smart Duration**: All perks last exactly as long as your game duration
+8. **Backpack Access**: Right-click the backpack item to open your personal inventory
 
 ## 🛠️ Developer Information
 
@@ -179,7 +204,8 @@ src/main/java/com/sh4dowking/forceitem/
     ├── GamePerk.java           # Abstract perk base class
     ├── PerkManager.java        # Multi-perk lifecycle management
     ├── SaturationPerk.java     # Infinite saturation implementation
-    └── ToolsPerk.java          # Netherite tools implementation
+    ├── ToolsPerk.java          # Netherite tools implementation
+    └── BackpackPerk.java       # Personal inventory implementation
 ```
 
 ### 🔨 Building from Source
@@ -207,4 +233,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Made with ❤️ for the Minecraft community by Sh4dowking**
 
-*ForceItem v2.1 - Now with comprehensive perk system and enhanced gameplay features!*
+*ForceItem v2.2.0 - Now with comprehensive perk system, enhanced GUI safety, and superior user experience!*

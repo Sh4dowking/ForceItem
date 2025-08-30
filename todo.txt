@@ -1,6 +1,5 @@
 - same item gamemode
 - Velocity + world reset
-- smaller biomes setting
 - consistent clean colors everywhere
 - tune down sounds, consistent sounds
 - make sure that only 1 player can have the start game gui open at a time

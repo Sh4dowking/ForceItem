@@ -44,7 +44,7 @@ public class DoubleTroubleModifier extends GameModifier {
             
             // Send special double trouble message
             player.sendMessage("§f§lYour targets: §b" + plugin.formatMaterialName(dualTargets.get(0)) + 
-                             " §7OR §b" + plugin.formatMaterialName(dualTargets.get(1)));
+                             " §7or §b" + plugin.formatMaterialName(dualTargets.get(1)));
         }
     }
     
@@ -80,7 +80,7 @@ public class DoubleTroubleModifier extends GameModifier {
         
         // Announce new targets
         player.sendMessage("§f§lNew targets: §b" + plugin.formatMaterialName(newTargets.get(0)) + 
-                         " §7OR §b" + plugin.formatMaterialName(newTargets.get(1)));
+                         " §7or §b" + plugin.formatMaterialName(newTargets.get(1)));
         
         // Update display
         plugin.updatePlayerDisplay(player);
@@ -153,7 +153,7 @@ public class DoubleTroubleModifier extends GameModifier {
         player.sendMessage("§4★Joker used! §a+1 point!");
         player.sendMessage("§f§lYou received: §b" + plugin.formatMaterialName(randomTarget));
         player.sendMessage("§f§lNew targets: §b" + plugin.formatMaterialName(newTargets.get(0)) + 
-                         " §7OR §b" + plugin.formatMaterialName(newTargets.get(1)));
+                         " §7or §b" + plugin.formatMaterialName(newTargets.get(1)));
         
         // Update display
         plugin.updatePlayerDisplay(player);
@@ -171,20 +171,28 @@ public class DoubleTroubleModifier extends GameModifier {
     public void onPlayerJoin(Player player) {
         UUID playerId = player.getUniqueId();
         
-        // Initialize dual targets for the new player
-        List<Material> dualTargets = generateDualTargets(playerId);
-        playerDualTargets.put(playerId, dualTargets);
-        
-        // Welcome message
-        player.sendMessage("§6§lWelcome to the ongoing Double Trouble game!");
-        player.sendMessage("§f§lTargets: §b" + plugin.formatMaterialName(dualTargets.get(0)) + 
-                         " §7OR §b" + plugin.formatMaterialName(dualTargets.get(1)));
+        // Check if the player already has dual targets (rejoining)
+        if (playerDualTargets.containsKey(playerId)) {
+            // Player is rejoining - just restore their targets without duplicate welcome message
+            List<Material> existingTargets = playerDualTargets.get(playerId);
+            player.sendMessage("§f§lYour Double Trouble targets: §b" + plugin.formatMaterialName(existingTargets.get(0)) + 
+                             " §7or §b" + plugin.formatMaterialName(existingTargets.get(1)));
+        } else {
+            // New player joining mid-game - initialize dual targets
+            List<Material> dualTargets = generateDualTargets(playerId);
+            playerDualTargets.put(playerId, dualTargets);
+            
+            // Welcome message for new player (but GameManager already sent a general welcome)
+            player.sendMessage("§6§lDouble Trouble mode activated!");
+            player.sendMessage("§f§lYour targets: §b" + plugin.formatMaterialName(dualTargets.get(0)) + 
+                             " §7or §b" + plugin.formatMaterialName(dualTargets.get(1)));
+        }
     }
     
     @Override
     public void onPlayerLeave(UUID playerId) {
-        // Clean up player's dual targets
-        playerDualTargets.remove(playerId);
+        // Don't remove dual targets - preserve them in case the player rejoins
+        // The targets will be cleared when the game ends in onGameEnd()
     }
     
     @Override
@@ -213,7 +221,7 @@ public class DoubleTroubleModifier extends GameModifier {
         // Notify the player
         player.sendMessage("§e⚡ Your Double Trouble targets have been skipped by an administrator!");
         player.sendMessage("§f§lNew targets: §b" + plugin.formatMaterialName(newTargets.get(0)) + 
-                         " §7OR §b" + plugin.formatMaterialName(newTargets.get(1)));
+                         " §7or §b" + plugin.formatMaterialName(newTargets.get(1)));
         player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
         
         // Update display

@@ -101,8 +101,6 @@ public class SaturationPerk extends GamePerk {
     public void onPlayerJoin(Player player) {
         // Apply saturation effect to players who join mid-game
         applySaturationEffect(player);
-        
-        player.sendMessage("§a§lPERK: §7You received §6Saturation §7effect!");
     }
     
     @Override

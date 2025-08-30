@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -323,6 +324,8 @@ public class LeaderboardGUI implements Listener {
             if (slot >= 10 && slot <= 16) {
                 int playerIndex = slot - 10;
                 if (playerIndex < sortedResults.size()) {
+                    // Play UI button click sound
+                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
                     showPlayerItems(player, playerIndex);
                 }
             }
@@ -335,22 +338,26 @@ public class LeaderboardGUI implements Listener {
         
         switch (slot) {
             case 0: // Back to leaderboard
+                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
                 showLeaderboard(player);
                 break;
             case 1: // Previous player
                 if (currentPlayer > 0) {
+                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
                     currentPlayerPage.put(player.getUniqueId(), 0); // Reset to first page
                     showPlayerItems(player, currentPlayer - 1);
                 }
                 break;
             case 7: // Next player
                 if (currentPlayer < sortedResults.size() - 1) {
+                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
                     currentPlayerPage.put(player.getUniqueId(), 0); // Reset to first page
                     showPlayerItems(player, currentPlayer + 1);
                 }
                 break;
             case 45: // Previous page
                 if (currentPage > 0) {
+                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
                     currentPlayerPage.put(player.getUniqueId(), currentPage - 1);
                     showPlayerItems(player, currentPlayer);
                 }
@@ -360,6 +367,7 @@ public class LeaderboardGUI implements Listener {
                     List<Material> items = sortedResults.get(currentPlayer).getCollectedItems();
                     int maxPages = (items.size() + 35) / 36;
                     if (currentPage < maxPages - 1) {
+                        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
                         currentPlayerPage.put(player.getUniqueId(), currentPage + 1);
                         showPlayerItems(player, currentPlayer);
                     }

@@ -89,8 +89,6 @@ public class ToolsPerk extends GamePerk {
     public void onPlayerJoin(Player player) {
         // Give tools to players who join mid-game
         giveToolsToPlayer(player);
-        
-        player.sendMessage("§a§lPERK: §7You received §8Netherite Tools§7!");
     }
     
     /**

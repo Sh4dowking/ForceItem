@@ -43,6 +43,7 @@ public class PerkManager {
         // Register built-in perks
         registerPerk(new SaturationPerk(plugin));
         registerPerk(new ToolsPerk(plugin));
+        registerPerk(new BackpackPerk(plugin));
     }
     
     /**
@@ -115,7 +116,8 @@ public class PerkManager {
     }
     
     /**
-     * Clear all active perks (used when starting a new game)
+     * Clear all active perks (manual reset - normally perks persist between rounds)
+     * This method is available for admin use but is not called automatically.
      */
     public void clearActivePerks() {
         activePerks.clear();
@@ -153,20 +155,24 @@ public class PerkManager {
                 perk.onGameEnd();
             }
         }
-        // Clear active perks for next game
-        activePerks.clear();
+        // Note: We DON'T clear active perks here anymore!
+        // This allows players to keep their perk selections between rounds
     }
     
     /**
      * Called when a new player joins during an active game
      * 
      * @param player The player who joined
+     * @param isNewPlayer Whether this is a truly new player (not rejoining)
      */
-    public void onPlayerJoin(Player player) {
+    public void onPlayerJoin(Player player, boolean isNewPlayer) {
         for (String perkName : activePerks) {
             GamePerk perk = registeredPerks.get(perkName);
             if (perk != null) {
-                perk.onPlayerJoin(player);
+                // Only give perk items to truly new players, not rejoining players
+                if (isNewPlayer) {
+                    perk.onPlayerJoin(player);
+                }
             }
         }
     }

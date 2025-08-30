@@ -2,8 +2,11 @@ package com.sh4dowking.forceitem;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -49,6 +52,36 @@ public class StartGameGUI implements Listener {
     // Modifier settings
     private String selectedModifier = "Standard Game"; // Default standard game
     
+    // Backup values for discarding changes
+    private int backupTimeMinutes;
+    private int backupJokers;
+    private String backupModifier;
+    private Set<String> backupActivePerks;
+    
+    // Temporary values used while editing in submenus
+    private int tempTimeMinutes;
+    private int tempJokers;
+    
+    // GUI access control - only one player can have the GUI open at a time
+    private UUID currentGUIUser = null;
+    
+    /**
+     * Clear the GUI user lock (called when game starts successfully)
+     */
+    public void clearGUILock() {
+        currentGUIUser = null;
+    }
+    
+    /**
+     * Check if a specific player is currently using the GUI
+     * 
+     * @param playerId The UUID of the player to check
+     * @return true if this player is the current GUI user
+     */
+    public boolean isCurrentGUIUser(UUID playerId) {
+        return currentGUIUser != null && currentGUIUser.equals(playerId);
+    }
+    
     public StartGameGUI(Main plugin) {
         this.plugin = plugin;
     }
@@ -57,8 +90,27 @@ public class StartGameGUI implements Listener {
      * Open the start game GUI for a player
      * 
      * @param player The player to show the GUI to
+     * @return true if GUI was opened successfully, false if another player has it open
      */
-    public void openStartGameGUI(Player player) {
+    public boolean openStartGameGUI(Player player) {
+        // Check if another player already has the GUI open
+        if (currentGUIUser != null) {
+            Player currentUser = Bukkit.getPlayer(currentGUIUser);
+            if (currentUser != null && currentUser.isOnline()) {
+                // Another player has the GUI open
+                player.sendMessage("§cThe start game GUI is currently being used by §4" + currentUser.getName() + "§c!");
+                player.sendMessage("§cPlease wait until they finish configuring the game settings.");
+                player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
+                return false;
+            } else {
+                // Previous user is offline, clear the lock
+                currentGUIUser = null;
+            }
+        }
+        
+        // Set this player as the current GUI user
+        currentGUIUser = player.getUniqueId();
+        
         Inventory gui = Bukkit.createInventory(null, GUI_SIZE, GUI_TITLE);
         
         // Fill the entire GUI with gray stained glass panes
@@ -70,6 +122,7 @@ public class StartGameGUI implements Listener {
         
         // Open the GUI for the player
         player.openInventory(gui);
+        return true;
     }
     
     /**
@@ -273,6 +326,16 @@ public class StartGameGUI implements Listener {
      * @param menuType The type of menu (Time Settings, Joker Settings, Modifiers, Perks)
      */
     public void openSubMenu(Player player, String menuType) {
+        // Save backup values before entering the submenu
+        backupTimeMinutes = currentTimeMinutes;
+        backupJokers = currentJokers;
+        backupModifier = selectedModifier;
+        backupActivePerks = new HashSet<>(plugin.getPerkManager().getActivePerks());
+        
+        // Initialize temporary values for editing
+        tempTimeMinutes = currentTimeMinutes;
+        tempJokers = currentJokers;
+        
         String title = SUB_GUI_TITLE_PREFIX + menuType;
         Inventory subGui = Bukkit.createInventory(null, GUI_SIZE, title);
         
@@ -298,27 +361,64 @@ public class StartGameGUI implements Listener {
     }
     
     /**
+     * Refresh the current submenu without resetting temporary values
+     * 
+     * @param player The player to refresh the menu for
+     * @param menuType The type of menu to refresh
+     */
+    private void refreshSubMenu(Player player, String menuType) {
+        String title = SUB_GUI_TITLE_PREFIX + menuType;
+        Inventory subGui = Bukkit.createInventory(null, GUI_SIZE, title);
+        
+        // Fill with gray glass panes
+        fillWithGrayGlass(subGui);
+        
+        // Add specific content based on menu type
+        if (menuType.equals("Time Settings")) {
+            setupTimeSettingsMenu(subGui);
+        } else if (menuType.equals("Joker Settings")) {
+            setupJokerSettingsMenu(subGui);
+        } else if (menuType.equals("Modifiers")) {
+            setupModifiersMenu(subGui);
+        } else if (menuType.equals("Perks")) {
+            setupPerksMenu(subGui);
+        } else {
+            // For other menus, just add navigation for now
+            addNavigationItems(subGui);
+        }
+        
+        // Open the refreshed sub-menu for the player
+        player.openInventory(subGui);
+    }
+    
+    /**
      * Add navigation items (back arrow and confirm button) to a sub-menu
      * 
      * @param inventory The inventory to add navigation items to
      */
     private void addNavigationItems(Inventory inventory) {
-        // Back arrow in bottom left (slot 45)
-        ItemStack backArrow = new ItemStack(Material.ARROW);
-        ItemMeta backMeta = backArrow.getItemMeta();
+        // Back button in bottom left (slot 45) - now using red dye
+        ItemStack backButton = new ItemStack(Material.RED_DYE);
+        ItemMeta backMeta = backButton.getItemMeta();
         if (backMeta != null) {
-            backMeta.setDisplayName("§c§lBack");
-            backMeta.setLore(java.util.Arrays.asList("§7Return to main menu"));
-            backArrow.setItemMeta(backMeta);
+            backMeta.setDisplayName("§c§lDiscard & Back");
+            backMeta.setLore(java.util.Arrays.asList(
+                "§7Discard all changes made",
+                "§7Return to main menu"
+            ));
+            backButton.setItemMeta(backMeta);
         }
-        inventory.setItem(45, backArrow);
+        inventory.setItem(45, backButton);
         
         // Confirm button in bottom right (slot 53)
         ItemStack confirmButton = new ItemStack(Material.LIME_DYE);
         ItemMeta confirmMeta = confirmButton.getItemMeta();
         if (confirmMeta != null) {
-            confirmMeta.setDisplayName("§a§lConfirm");
-            confirmMeta.setLore(java.util.Arrays.asList("§7Apply settings and return"));
+            confirmMeta.setDisplayName("§a§lSave & Confirm");
+            confirmMeta.setLore(java.util.Arrays.asList(
+                "§7Save all changes made",
+                "§7Return to main menu"
+            ));
             confirmButton.setItemMeta(confirmMeta);
         }
         inventory.setItem(53, confirmButton);
@@ -507,7 +607,7 @@ public class StartGameGUI implements Listener {
             meta.setLore(java.util.Arrays.asList(
                 "§7Click to " + (isIncrement ? "increase" : "decrease") + " time by " + amount + " minute" + (amount == 1 ? "" : "s"),
                 "",
-                "§7Current time: §6" + formatTime(currentTimeMinutes)
+                "§7Current time: §6" + formatTime(tempTimeMinutes)
             ));
             item.setItemMeta(meta);
         }
@@ -525,7 +625,7 @@ public class StartGameGUI implements Listener {
         if (meta != null) {
             meta.setDisplayName("§e§lGame Duration");
             meta.setLore(java.util.Arrays.asList(
-                "§7Current setting: §6" + formatTime(currentTimeMinutes),
+                "§7Current setting: §6" + formatTime(tempTimeMinutes),
                 "",
                 "§7Use buttons below to adjust time",
                 "§7Range: " + MIN_TIME_MINUTES + " minute - " + (MAX_TIME_MINUTES/60) + " hours"
@@ -573,7 +673,7 @@ public class StartGameGUI implements Listener {
             meta.setLore(java.util.Arrays.asList(
                 "§7Click to " + (isIncrement ? "increase" : "decrease") + " jokers by " + amount,
                 "",
-                "§7Current jokers: §6" + currentJokers + " per player"
+                "§7Current jokers: §6" + tempJokers + " per player"
             ));
             item.setItemMeta(meta);
         }
@@ -591,7 +691,7 @@ public class StartGameGUI implements Listener {
         if (meta != null) {
             meta.setDisplayName("§4§lJokers Per Player");
             meta.setLore(java.util.Arrays.asList(
-                "§7Current setting: §6" + currentJokers + " joker" + (currentJokers == 1 ? "" : "s"),
+                "§7Current setting: §6" + tempJokers + " joker" + (tempJokers == 1 ? "" : "s"),
                 "",
                 "§7Use buttons below to adjust jokers",
                 "§7Range: " + MIN_JOKERS + " - " + MAX_JOKERS + " jokers"
@@ -642,38 +742,60 @@ public class StartGameGUI implements Listener {
         switch (slot) {
             case 12: // Time Settings
                 if (clickedItem.getType() == Material.CLOCK) {
+                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
                     openSubMenu(player, "Time Settings");
                 }
                 break;
             case 14: // Joker Settings
                 if (clickedItem.getType() == Material.BARRIER) {
+                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
                     openSubMenu(player, "Joker Settings");
                 }
                 break;
             case 19: // Modifiers
                 if (clickedItem.getType() == Material.ENCHANTED_BOOK) {
+                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
                     openSubMenu(player, "Modifiers");
                 }
                 break;
             case 25: // Perks
                 if (clickedItem.getType() == Material.DIAMOND) {
+                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
                     openSubMenu(player, "Perks");
                 }
                 break;
             case 38: // Cancel button
                 if (clickedItem.getType() == Material.RED_TERRACOTTA) {
+                    player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
                     player.closeInventory();
                 }
                 break;
             case 42: // Start Game button
                 if (clickedItem.getType() == Material.LIME_TERRACOTTA) {
+                    // Play experience orb collected sound
+                    player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
+                    
                     // Start game with configured settings including modifier
                     player.closeInventory();
                     int seconds = currentTimeMinutes * 60; // Convert minutes to seconds
                     String modifierToUse = selectedModifier.equals("Standard Game") ? null : selectedModifier;
                     plugin.startGame(seconds, currentJokers, modifierToUse); // Use configured settings with modifier
+                    
+                    // Clear the GUI lock since the game started successfully
+                    clearGUILock();
+                    
                     player.sendMessage("§a§lStarting ForceItem game!");
-                    player.sendMessage("§f§lDuration: §b" + formatTime(currentTimeMinutes) + " §7| §f§lJokers: §b" + currentJokers + " §7| §f§lModifier: §b" + selectedModifier);
+                    player.sendMessage("§f§lDuration: §b" + formatTime(currentTimeMinutes) + " §7| §f§lJokers: §b" + currentJokers);
+                    StringBuilder perkStringBuilder = new StringBuilder();
+                    if(plugin.getPerkManager().getActivePerks().isEmpty()) {
+                        perkStringBuilder.append("None");
+                    } else {
+                        for (String perk : plugin.getPerkManager().getActivePerks()) {
+                            perkStringBuilder.append(perk).append(", ");
+                        }
+                        perkStringBuilder.setLength(perkStringBuilder.length() - 2);
+                    }
+                    player.sendMessage("§f§lModifier: §b" + selectedModifier + " §7| §f§lPerks: §b" + perkStringBuilder.toString());
                 }
                 break;
         }
@@ -683,11 +805,15 @@ public class StartGameGUI implements Listener {
      * Handle clicks in sub-menus
      */
     private void handleSubMenuClick(Player player, int slot, ItemStack clickedItem, String menuTitle) {
-        if (slot == 45 && clickedItem.getType() == Material.ARROW) {
-            // Back button clicked - return to main menu
+        if (slot == 45 && clickedItem.getType() == Material.RED_DYE) {
+            // Back button clicked - discard changes and return to main menu
+            discardChanges();
+            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 0.7f);
             openStartGameGUI(player);
         } else if (slot == 53 && clickedItem.getType() == Material.LIME_DYE) {
-            // Confirm button clicked - apply settings and return to main menu
+            // Confirm button clicked - save changes and return to main menu
+            saveChanges();
+            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 1.3f);
             openStartGameGUI(player);
         } else if (menuTitle.contains("Time Settings")) {
             // Handle time setting adjustments
@@ -704,6 +830,42 @@ public class StartGameGUI implements Listener {
         }
         
         // TODO: Handle other sub-menu specific items here
+    }
+    
+    /**
+     * Discard changes made in submenus and restore backup values
+     */
+    private void discardChanges() {
+        currentTimeMinutes = backupTimeMinutes;
+        currentJokers = backupJokers;
+        selectedModifier = backupModifier;
+        
+        // Restore perk state - first get current active perks
+        Set<String> currentActivePerks = new HashSet<>(plugin.getPerkManager().getActivePerks());
+        
+        // Disable all currently active perks that weren't active before
+        for (String perkName : currentActivePerks) {
+            if (!backupActivePerks.contains(perkName)) {
+                plugin.getPerkManager().disablePerk(perkName);
+            }
+        }
+        
+        // Enable all perks that were active before but aren't active now
+        for (String perkName : backupActivePerks) {
+            if (!currentActivePerks.contains(perkName)) {
+                plugin.getPerkManager().enablePerk(perkName);
+            }
+        }
+    }
+    
+    /**
+     * Save changes made in submenus to the main settings
+     */
+    private void saveChanges() {
+        // Apply temporary time and joker settings to the main settings
+        currentTimeMinutes = tempTimeMinutes;
+        currentJokers = tempJokers;
+        // Modifier and perk changes are already applied directly, so no need to save them here
     }
     
     /**
@@ -747,9 +909,9 @@ public class StartGameGUI implements Listener {
         
         // Check if the change would exceed limits before applying
         boolean wouldExceedLimits = false;
-        if (isIncrement && (currentTimeMinutes + timeChange) > MAX_TIME_MINUTES) {
+        if (isIncrement && (tempTimeMinutes + timeChange) > MAX_TIME_MINUTES) {
             wouldExceedLimits = true;
-        } else if (!isIncrement && (currentTimeMinutes - timeChange) < MIN_TIME_MINUTES) {
+        } else if (!isIncrement && (tempTimeMinutes - timeChange) < MIN_TIME_MINUTES) {
             wouldExceedLimits = true;
         }
         
@@ -769,17 +931,17 @@ public class StartGameGUI implements Listener {
             if (changed) {
                 // Play different success sounds for increment vs decrement
                 if (isIncrement) {
-                    player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 1.3f); // High pitch pling for joker increment
+                    player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 1.3f); // High pitch pling for time increment
                 } else {
-                    player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 0.7f); // Lower pitch pling for joker decrement
+                    player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 0.7f); // Lower pitch pling for time decrement
                 }
-                openSubMenu(player, "Time Settings");
+                refreshSubMenu(player, "Time Settings");
             }
         }
     }
     
     /**
-     * Adjust the current time setting
+     * Adjust the current time setting (using temporary variable)
      * 
      * @param amount The amount to adjust by (in minutes)
      * @param isIncrement Whether to increment (true) or decrement (false)
@@ -788,18 +950,18 @@ public class StartGameGUI implements Listener {
     private boolean adjustTime(int amount, boolean isIncrement) {
         int newTime;
         if (isIncrement) {
-            newTime = currentTimeMinutes + amount;
+            newTime = tempTimeMinutes + amount;
             if (newTime > MAX_TIME_MINUTES) {
                 return false; // Hit maximum limit
             }
         } else {
-            newTime = currentTimeMinutes - amount;
+            newTime = tempTimeMinutes - amount;
             if (newTime < MIN_TIME_MINUTES) {
                 return false; // Hit minimum limit
             }
         }
         
-        currentTimeMinutes = newTime;
+        tempTimeMinutes = newTime;
         return true;
     }
     
@@ -840,9 +1002,9 @@ public class StartGameGUI implements Listener {
         
         // Check if the change would exceed limits before applying
         boolean wouldExceedLimits = false;
-        if (isIncrement && (currentJokers + jokerChange) > MAX_JOKERS) {
+        if (isIncrement && (tempJokers + jokerChange) > MAX_JOKERS) {
             wouldExceedLimits = true;
-        } else if (!isIncrement && (currentJokers - jokerChange) < MIN_JOKERS) {
+        } else if (!isIncrement && (tempJokers - jokerChange) < MIN_JOKERS) {
             wouldExceedLimits = true;
         }
         
@@ -866,13 +1028,13 @@ public class StartGameGUI implements Listener {
                 } else {
                     player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 0.7f); // Lower pitch pling for joker decrement
                 }
-                openSubMenu(player, "Joker Settings");
+                refreshSubMenu(player, "Joker Settings");
             }
         }
     }
     
     /**
-     * Adjust the current joker setting
+     * Adjust the current joker setting (using temporary variable)
      * 
      * @param amount The amount to adjust by (in jokers)
      * @param isIncrement Whether to increment (true) or decrement (false)
@@ -881,18 +1043,18 @@ public class StartGameGUI implements Listener {
     private boolean adjustJokers(int amount, boolean isIncrement) {
         int newJokers;
         if (isIncrement) {
-            newJokers = currentJokers + amount;
+            newJokers = tempJokers + amount;
             if (newJokers > MAX_JOKERS) {
                 return false; // Hit maximum limit
             }
         } else {
-            newJokers = currentJokers - amount;
+            newJokers = tempJokers - amount;
             if (newJokers < MIN_JOKERS) {
                 return false; // Hit minimum limit
             }
         }
         
-        currentJokers = newJokers;
+        tempJokers = newJokers;
         return true;
     }
     
@@ -910,9 +1072,11 @@ public class StartGameGUI implements Listener {
                 if (clickedItem.getType() == Material.GRASS_BLOCK) {
                     selectedModifier = "Standard Game";
                     
+                    // Play sound feedback
+                    player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 1.0f);
+                    
                     // Refresh the modifiers menu to show updated selection
-                    Inventory currentInv = player.getOpenInventory().getTopInventory();
-                    setupModifiersMenu(currentInv);
+                    refreshSubMenu(player, "Modifiers");
                 }
                 break;
                 
@@ -921,9 +1085,11 @@ public class StartGameGUI implements Listener {
                 if (clickedItem.getType() == Material.NETHERITE_SCRAP) {
                     selectedModifier = "Double Trouble";
                     
+                    // Play sound feedback
+                    player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 1.0f);
+                    
                     // Refresh the modifiers menu to show updated selection
-                    Inventory currentInv = player.getOpenInventory().getTopInventory();
-                    setupModifiersMenu(currentInv);
+                    refreshSubMenu(player, "Modifiers");
                 }
                 break;
                 
@@ -956,8 +1122,7 @@ public class StartGameGUI implements Listener {
                 }
                 
                 // Refresh the perks menu to show updated selections
-                Inventory currentInv = player.getOpenInventory().getTopInventory();
-                setupPerksMenu(currentInv);
+                refreshSubMenu(player, "Perks");
                 
                 // Play sound feedback
                 player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 1.0f);
@@ -977,7 +1142,11 @@ public class StartGameGUI implements Listener {
             return;
         }
         
-        // TODO: Add any cleanup logic if needed
-        // For now, no cleanup is necessary
+        // If this is the main GUI, clear the GUI user lock
+        if (title.equals(GUI_TITLE) && event.getPlayer() instanceof Player player) {
+            if (currentGUIUser != null && currentGUIUser.equals(player.getUniqueId())) {
+                currentGUIUser = null;
+            }
+        }
     }
 }

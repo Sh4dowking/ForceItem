@@ -198,6 +198,19 @@ public class Main extends JavaPlugin implements Listener {
         playerBackpacks.put(playerId, backpackInv);
     }
     
+    /**
+     * Create backpack inventories for all online players
+     * Used when Backpack perk is activated during game
+     */
+    public void createBackpacksForAllOnlinePlayers() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            UUID playerId = player.getUniqueId();
+            if (!playerBackpacks.containsKey(playerId)) {
+                createPlayerBackpack(playerId, player.getName());
+            }
+        }
+    }
+    
     public ItemInfoGUI getItemInfoGUI() {
         return itemInfoGUI;
     }
@@ -325,9 +338,14 @@ public class Main extends JavaPlugin implements Listener {
      * Get or create a backpack inventory for a player
      * 
      * @param player The player to get the backpack for
-     * @return The player's backpack inventory
+     * @return The player's backpack inventory, or null if the player doesn't have the Backpack perk
      */
     private Inventory getPlayerBackpack(Player player) {
+        // Check if player has the Backpack perk active
+        if (!perkManager.isPerkActive("Backpack")) {
+            return null;
+        }
+        
         UUID playerId = player.getUniqueId();
         Inventory backpack = playerBackpacks.get(playerId);
         
@@ -382,13 +400,22 @@ public class Main extends JavaPlugin implements Listener {
             }
         }
         
-        // Handle backpack item usage
+        // Handle backpack item usage (only if Backpack perk is active)
         if (isBackpackItem(item)) {
             event.setCancelled(true);
-            // Open player's personal backpack
-            Inventory backpack = getPlayerBackpack(player);
-            player.openInventory(backpack);
-            player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 1.0f, 1.0f);
+            
+            if (perkManager.isPerkActive("Backpack")) {
+                // Open player's personal backpack
+                Inventory backpack = getPlayerBackpack(player);
+                if (backpack != null) {
+                    player.openInventory(backpack);
+                    player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 1.0f, 1.0f);
+                } else {
+                    player.sendMessage("§cBackpack inventory not available!");
+                }
+            } else {
+                player.sendMessage("§cBackpack perk is not active!");
+            }
         }
     }    @EventHandler
     public void onBlockPlace(BlockPlaceEvent event) {
@@ -490,12 +517,18 @@ public class Main extends JavaPlugin implements Listener {
             // GameManager handles all initialization including jokers, backpack items, etc.
             gameManager.initializeNewPlayer(player);
             
-            // Notify perk system of new player
-            perkManager.onPlayerJoin(player);
+            // Notify modifier system of player joining (for modifiers like Double Trouble)
+            modifierManager.onPlayerJoin(player);
             
-            // Create their personal backpack inventory for UI handling
-            Inventory backpackInv = Bukkit.createInventory(null, 27, ChatColor.WHITE + player.getName() + "'s Backpack");
-            playerBackpacks.put(playerId, backpackInv);
+            // Notify perk system of new player - check if they're truly new or rejoining
+            boolean isNewPlayer = !gameManager.wasPlayerAtGameStart(playerId);
+            perkManager.onPlayerJoin(player, isNewPlayer);
+            
+            // Create their personal backpack inventory only if Backpack perk is active
+            if (perkManager.isPerkActive("Backpack")) {
+                Inventory backpackInv = Bukkit.createInventory(null, 27, ChatColor.WHITE + player.getName() + "'s Backpack");
+                playerBackpacks.put(playerId, backpackInv);
+            }
         }
     }
     
@@ -506,6 +539,9 @@ public class Main extends JavaPlugin implements Listener {
         // Clean up player's boss bar through GameManager
         if (gameManager.isGameRunning()) {
             gameManager.handlePlayerLeave(player);
+            
+            // Notify modifier system of player leaving (for modifiers like Double Trouble)
+            modifierManager.onPlayerLeave(player.getUniqueId());
             
             // Notify perk system of player leaving
             perkManager.onPlayerLeave(player.getUniqueId());
